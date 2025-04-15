@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './App.css';
 import GoogleLogin from './components/GoogleLogin';
-import CalendarView from './components/CalendarView';
+import MonthlyCalendarView from './components/MonthlyCalendarView';
 
 // GoogleUserの型定義
 interface GoogleUser {
@@ -37,7 +37,7 @@ function App() {
       </header>
       
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
+        <div className="px-4 py-2 sm:px-0">
           {/* Googleログインコンポーネント */}
           <div className="mb-8">
             <GoogleLogin 
@@ -46,15 +46,19 @@ function App() {
             />
           </div>
           
-          {/* カレンダー表示コンポーネント */}
-          <CalendarView user={user} token={token} />
+          {/* 月単位カレンダー表示コンポーネント */}
+          <MonthlyCalendarView 
+            user={user} 
+            token={token}
+            calendarId="med.miyazaki-u.ac.jp_lfki2pa7phl59ikva7ue5bkfnc@group.calendar.google.com"
+          />
         </div>
       </main>
       
       <footer className="bg-white shadow mt-8 py-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <p className="text-center text-gray-500 text-sm">
-            © 2025 病院カレンダーアプリ - Googleカレンダーと連携して予定を管理
+            © 2025 病院カレンダーアプリ - 循環器内科カレンダー
           </p>
         </div>
       </footer>
