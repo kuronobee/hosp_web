@@ -1,7 +1,7 @@
 import React from 'react';
 
 // イベントの型定義
-interface CalendarEvent {
+export interface CalendarEvent {
   id: string;
   summary: string;
   start: {
@@ -15,26 +15,16 @@ interface CalendarEvent {
   location?: string;
   description?: string;
   colorId?: string;
+  // カレンダーID追加（どのカレンダーのイベントか識別するため）
+  calendarId?: string;
 }
 
 interface EventCardProps {
   event: CalendarEvent;
+  onViewDetails: (event: CalendarEvent) => void;
+  // カレンダーの背景色指定用
+  calendarStyles: Record<string, string>;
 }
-
-// イベントカラーマップ
-const EVENT_COLORS: Record<string, string> = {
-  '1': 'border-blue-500 bg-blue-50',  // 青
-  '2': 'border-green-500 bg-green-50', // 緑
-  '3': 'border-purple-500 bg-purple-50', // 紫
-  '4': 'border-red-500 bg-red-50',   // 赤
-  '5': 'border-yellow-500 bg-yellow-50', // 黄
-  '6': 'border-orange-500 bg-orange-50', // オレンジ
-  '7': 'border-cyan-500 bg-cyan-50', // シアン
-  '8': 'border-pink-500 bg-pink-50', // ピンク
-  '9': 'border-teal-500 bg-teal-50', // ティール
-  '10': 'border-indigo-500 bg-indigo-50', // インディゴ
-  'default': 'border-gray-500 bg-white' // デフォルト
-};
 
 // 時間のフォーマット関数
 const formatTime = (dateTimeStr: string | undefined): string => {
@@ -53,11 +43,32 @@ const isAllDayEvent = (event: CalendarEvent): boolean => {
   return !event.start.dateTime && !!event.start.date;
 };
 
-const EventCard: React.FC<EventCardProps> = ({ event }) => {
-  // イベントの色を取得
-  const colorClass = event.colorId 
-    ? EVENT_COLORS[event.colorId] || EVENT_COLORS.default
-    : EVENT_COLORS.default;
+// イベントをフィルタリングするための関数
+export const shouldShowEvent = (event: CalendarEvent): boolean => {
+  // タイトルが×, @, #で始まるイベントを除外
+  if (event.summary && /^[×@#]/.test(event.summary)) {
+    return false;
+  }
+  
+  // 時間範囲指定があるイベントを除外
+  if (event.start.dateTime && event.end.dateTime) {
+    const startTime = new Date(event.start.dateTime);
+    const endTime = new Date(event.end.dateTime);
+    
+    // 開始時間と終了時間が異なる場合（時間範囲指定あり）は除外
+    if (endTime.getTime() - startTime.getTime() > 30 * 60 * 1000) { // 30分以上の場合は範囲指定と見なす
+      return false;
+    }
+  }
+  
+  return true;
+};
+
+const EventCard: React.FC<EventCardProps> = ({ event, onViewDetails, calendarStyles }) => {
+  // カレンダーIDに基づいた背景色を取得
+  const calendarBgClass = event.calendarId && calendarStyles[event.calendarId] 
+    ? calendarStyles[event.calendarId]
+    : 'bg-white';
   
   // 終日イベントか時間指定イベントかを判定
   const allDay = isAllDayEvent(event);
@@ -65,10 +76,13 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => {
   // 時間文字列を作成
   const timeString = allDay 
     ? '終日' 
-    : `${formatTime(event.start.dateTime)} - ${formatTime(event.end.dateTime)}`;
+    : `${formatTime(event.start.dateTime)}`;
 
   return (
-    <div className={`rounded-lg shadow-sm p-3 mb-2 border-l-4 ${colorClass} hover:shadow-md transition-shadow`}>
+    <div 
+      className={`rounded-lg shadow-sm p-3 mb-2 border-l-4 border-gray-300 ${calendarBgClass} hover:shadow-md transition-shadow cursor-pointer`}
+      onClick={() => onViewDetails(event)}
+    >
       <div className="flex flex-col">
         <div className="text-xs text-gray-600 mb-1">
           {timeString}
@@ -85,12 +99,6 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
             </svg>
             <span className="truncate">{event.location}</span>
-          </div>
-        )}
-        
-        {event.description && (
-          <div className="text-xs text-gray-600 mt-1 line-clamp-1">
-            {event.description}
           </div>
         )}
       </div>

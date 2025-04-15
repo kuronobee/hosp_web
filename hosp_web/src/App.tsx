@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './App.css';
 import GoogleLogin from './components/GoogleLogin';
-import MonthlyCalendarView from './components/MonthlyCalendarView';
+import MultiCalendarView from './components/MultiCalendarView';
 
 // GoogleUserの型定義
 interface GoogleUser {
@@ -46,11 +46,10 @@ function App() {
             />
           </div>
           
-          {/* 月単位カレンダー表示コンポーネント */}
-          <MonthlyCalendarView 
+          {/* 複数カレンダー表示コンポーネント */}
+          <MultiCalendarView 
             user={user} 
             token={token}
-            calendarId="med.miyazaki-u.ac.jp_lfki2pa7phl59ikva7ue5bkfnc@group.calendar.google.com"
           />
         </div>
       </main>
@@ -58,7 +57,7 @@ function App() {
       <footer className="bg-white shadow mt-8 py-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <p className="text-center text-gray-500 text-sm">
-            © 2025 病院カレンダーアプリ - 循環器内科カレンダー
+            © 2025 病院カレンダーアプリ - 医局予定表
           </p>
         </div>
       </footer>

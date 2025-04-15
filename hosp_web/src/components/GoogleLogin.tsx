@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
+import { TokenResponse } from '@react-oauth/google';
 
 interface GoogleUser {
   email: string;
@@ -61,7 +62,7 @@ const GoogleLogin = ({ onLoginSuccess, onLogout }: GoogleLoginProps) => {
       const client = window.google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: 'https://www.googleapis.com/auth/calendar.readonly',
-        callback: (tokenResponse) => {
+        callback: (tokenResponse: TokenResponse) => {
           if (tokenResponse.error) {
             console.error('カレンダー権限の取得に失敗しました:', tokenResponse.error);
             setError('カレンダー権限の取得に失敗しました: ' + tokenResponse.error);

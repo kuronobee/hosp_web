@@ -1,21 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import EventCard from './EventCard';
-
-interface CalendarEvent {
-  id: string;
-  summary: string;
-  start: {
-    dateTime: string;
-    date?: string;
-  };
-  end: {
-    dateTime: string;
-    date?: string;
-  };
-  location?: string;
-  description?: string;
-  colorId?: string;
-}
+import EventCard, { CalendarEvent, shouldShowEvent } from './EventCard';
+import EventDetailsModal from './EventDetailsModal';
 
 interface GoogleUser {
   email: string;
@@ -23,11 +8,39 @@ interface GoogleUser {
   picture: string;
 }
 
-interface MonthlyCalendarViewProps {
+interface MultiCalendarViewProps {
   user: GoogleUser | null;
   token: string;
-  calendarId?: string;
 }
+
+// カレンダー情報を定義
+const CALENDARS = [
+  {
+    id: "med.miyazaki-u.ac.jp_lfki2pa7phl59ikva7ue5bkfnc@group.calendar.google.com",
+    name: "循環器内科",
+    bgClass: "bg-pink-50",
+    defaultSelected: true
+  },
+  {
+    id: "med.miyazaki-u.ac.jp_g082esl03g5ei2facghfkt96r4@group.calendar.google.com",
+    name: "腎臓内科",
+    bgClass: "bg-green-50",
+    defaultSelected: false
+  },
+  {
+    id: "med.miyazaki-u.ac.jp_n0nmh5i6ioqcol3m3m2nclvv5k@group.calendar.google.com",
+    name: "アブレーション",
+    bgClass: "bg-yellow-50",
+    defaultSelected: false
+  }
+];
+
+// カレンダーID→背景色のマッピング
+const CALENDAR_STYLES: Record<string, string> = {
+  "med.miyazaki-u.ac.jp_lfki2pa7phl59ikva7ue5bkfnc@group.calendar.google.com": "bg-pink-50",
+  "med.miyazaki-u.ac.jp_g082esl03g5ei2facghfkt96r4@group.calendar.google.com": "bg-green-50",
+  "med.miyazaki-u.ac.jp_n0nmh5i6ioqcol3m3m2nclvv5k@group.calendar.google.com": "bg-yellow-50"
+};
 
 // 日付をYYYY-MM-DD形式に変換する関数
 const formatDateToYYYYMMDD = (date: Date): string => {
@@ -77,6 +90,7 @@ const generateMonthDates = (month: Date): Date[] => {
   
   // 月の初日
   const startDate = new Date(year, monthIndex, 1);
+  void startDate; // 今は使わない
   
   // 月の最終日
   const endDate = new Date(year, monthIndex + 1, 0);
@@ -89,16 +103,16 @@ const generateMonthDates = (month: Date): Date[] => {
   return dates;
 };
 
-const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({ 
-  user, 
-  token,
-  calendarId = 'med.miyazaki-u.ac.jp_lfki2pa7phl59ikva7ue5bkfnc@group.calendar.google.com'
-}) => {
+const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({ user, token }) => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [groupedEvents, setGroupedEvents] = useState<Record<string, CalendarEvent[]>>({});
+  const [selectedCalendars, setSelectedCalendars] = useState<string[]>(
+    CALENDARS.filter(cal => cal.defaultSelected).map(cal => cal.id)
+  );
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
   // 月を変更する関数
   const changeMonth = (increment: number) => {
@@ -107,9 +121,22 @@ const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
     setCurrentMonth(newMonth);
   };
 
+  // カレンダー選択状態の切り替え
+  const toggleCalendar = (calendarId: string) => {
+    setSelectedCalendars(prev => {
+      if (prev.includes(calendarId)) {
+        return prev.filter(id => id !== calendarId);
+      } else {
+        return [...prev, calendarId];
+      }
+    });
+  };
+
   // イベントを取得する関数
   const fetchEvents = async () => {
-    if (!user || !token) {
+    if (!user || !token || selectedCalendars.length === 0) {
+      setEvents([]);
+      setGroupedEvents({});
       return;
     }
     
@@ -125,30 +152,49 @@ const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
       const timeMin = startOfMonth.toISOString();
       const timeMax = endOfMonth.toISOString();
       
-      const response = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
-          calendarId
-        )}/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(
-          timeMax
-        )}&maxResults=100&singleEvents=true&orderBy=startTime`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      // 選択されたすべてのカレンダーからイベントを取得
+      const allPromises = selectedCalendars.map(calendarId => 
+        fetch(
+          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
+            calendarId
+          )}/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(
+            timeMax
+          )}&maxResults=100&singleEvents=true&orderBy=startTime`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        )
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`カレンダー ${calendarId} のイベント取得エラー: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          // 各イベントにカレンダーIDを追加
+          return (data.items || []).map((item: CalendarEvent) => ({
+            ...item,
+            calendarId
+          }));
+        })
       );
-
-      if (!response.ok) {
-        throw new Error(`イベント取得エラー: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('取得したイベント:', data);
       
-      setEvents(data.items || []);
+      // すべてのカレンダーデータを取得
+      const results = await Promise.all(allPromises);
+      
+      // すべてのイベントを結合
+      const allEvents = results.flat();
+      console.log('取得したすべてのイベント:', allEvents);
+      
+      // フィルタリング条件に基づいてイベントをフィルタリング
+      const filteredEvents = allEvents.filter(shouldShowEvent);
+      
+      setEvents(filteredEvents);
       
       // イベントを日付ごとにグループ化
-      const grouped = groupEventsByDate(data.items || []);
+      const grouped = groupEventsByDate(filteredEvents);
       setGroupedEvents(grouped);
       
       setIsLoading(false);
@@ -159,13 +205,23 @@ const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
     }
   };
 
-  // 月が変わったときに再取得
+  // 月が変わったときやカレンダー選択状態が変わったときに再取得
   useEffect(() => {
     fetchEvents();
-  }, [user, token, currentMonth, calendarId]);
+  }, [user, token, currentMonth, selectedCalendars]);
 
   // 月の日付配列を生成
   const monthDates = generateMonthDates(currentMonth);
+
+  // イベント詳細を表示
+  const handleViewEventDetails = (event: CalendarEvent) => {
+    setSelectedEvent(event);
+  };
+
+  // イベント詳細モーダルを閉じる
+  const handleCloseEventDetails = () => {
+    setSelectedEvent(null);
+  };
 
   if (!user || !token) {
     return (
@@ -178,24 +234,51 @@ const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
   return (
     <div className="mt-6 border border-gray-200 rounded-lg p-6 bg-white shadow-sm">
       {/* カレンダーヘッダー */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <h2 className="text-xl font-bold text-gray-800">
           {currentMonth.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' })}
         </h2>
         
-        <div className="flex space-x-2">
-          <button 
-            onClick={() => changeMonth(-1)}
-            className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100"
-          >
-            前月
-          </button>
-          <button 
-            onClick={() => changeMonth(1)}
-            className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100"
-          >
-            次月
-          </button>
+        <div className="flex flex-col md:flex-row gap-4">
+          {/* カレンダー選択チェックボックス */}
+          <div className="flex flex-wrap gap-3">
+            {CALENDARS.map(calendar => (
+              <label key={calendar.id} className={`flex items-center cursor-pointer p-2 rounded ${CALENDAR_STYLES[calendar.id]} border`}>
+                <input
+                  type="checkbox"
+                  checked={selectedCalendars.includes(calendar.id)}
+                  onChange={() => toggleCalendar(calendar.id)}
+                  className="mr-2"
+                />
+                <span>{calendar.name}</span>
+              </label>
+            ))}
+          </div>
+          
+          {/* 月ナビゲーション */}
+          <div className="flex space-x-2">
+            <button 
+              onClick={() => changeMonth(-1)}
+              className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100"
+            >
+              前月
+            </button>
+            <button
+              onClick={() => {
+                const now = new Date();
+                setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+              }}
+              className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100"
+            >
+              今月
+            </button>
+            <button 
+              onClick={() => changeMonth(1)}
+              className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100"
+            >
+              次月
+            </button>
+          </div>
         </div>
       </div>
       
@@ -224,7 +307,9 @@ const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
         <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 my-4">
           <p className="font-medium">予定はありません</p>
           <p className="text-sm mt-2">
-            この月の予定はありません。Googleカレンダーで予定を追加できます。
+            {selectedCalendars.length === 0 
+              ? 'カレンダーが選択されていません。上のチェックボックスから表示するカレンダーを選択してください。' 
+              : 'この月の予定はありません。Googleカレンダーで予定を追加できます。'}
           </p>
         </div>
       ) : (
@@ -251,7 +336,12 @@ const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
                 <div className="p-3">
                   {dayEvents.length > 0 ? (
                     dayEvents.map(event => (
-                      <EventCard key={event.id} event={event} />
+                      <EventCard 
+                        key={event.id} 
+                        event={event} 
+                        onViewDetails={handleViewEventDetails}
+                        calendarStyles={CALENDAR_STYLES}
+                      />
                     ))
                   ) : (
                     <p className="text-sm text-gray-500 italic p-2">予定なし</p>
@@ -262,8 +352,16 @@ const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
           })}
         </div>
       )}
+      
+      {/* イベント詳細モーダル */}
+      {selectedEvent && (
+        <EventDetailsModal 
+          event={selectedEvent}
+          onClose={handleCloseEventDetails}
+        />
+      )}
     </div>
   );
 };
 
-export default MonthlyCalendarView;
+export default MultiCalendarView;
