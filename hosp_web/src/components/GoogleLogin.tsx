@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 
+const islocal = true;
+
 interface GoogleUser {
   email: string;
   name: string;
@@ -12,7 +14,7 @@ interface GoogleLoginProps {
 }
 
 // バックエンドAPIのベースURL
-const API_BASE_URL = 'https://hosp-api-ken-go-cf8ea894c5d3.herokuapp.com';//'http://localhost:3000';//'https://krkkng.com/hospitalization/web/hosp_api/api'; // 実際の環境に合わせて変更してください
+const API_BASE_URL = islocal ? 'http://localhost:3000' : 'https://hosp-api-ken-go-cf8ea894c5d3.herokuapp.com';
 
 const GoogleLogin = ({ onLoginSuccess, onLogout }: GoogleLoginProps) => {
   const [user, setUser] = useState<GoogleUser | null>(null);
@@ -23,7 +25,7 @@ const GoogleLogin = ({ onLoginSuccess, onLogout }: GoogleLoginProps) => {
   const CLIENT_ID = '647090775844-eiqmcdrfokfc8jnpfdhbvbr8g7sa4ncs.apps.googleusercontent.com';
   // 正確なリダイレクトURI（vite.config.tsのbaseパスを含む）
   // GoogleLogin.tsx
-  const REDIRECT_URI = 'http://localhost:5173';
+  const REDIRECT_URI = islocal ? 'http://localhost:5173/hospitalization/web' : 'https://krkkng.com/hospitalization/web';//'http://localhost:5173/hospitalization/web';
    
   console.log('REDIRECT_URI:', REDIRECT_URI);
   // Googleボタンのレンダリング関数
