@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: '/hospitalization/web/', // または実際のベースパス。例: '/hospital-app/'
+  base: '/', // または実際のベースパス。例: '/hospital-app/'
   build: {
     sourcemap: true, // エラーのデバッグに便利
   },

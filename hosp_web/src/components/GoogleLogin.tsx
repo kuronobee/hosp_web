@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { jwtDecode } from 'jwt-decode';
 
 interface GoogleUser {
   email: string;
@@ -12,14 +11,8 @@ interface GoogleLoginProps {
   onLogout: () => void;
 }
 
-// トークンレスポンスの型定義
-interface TokenResponse {
-  access_token: string;
-  expires_in: number;
-  scope: string;
-  token_type: string;
-  error?: string;
-}
+// バックエンドAPIのベースURL
+const API_BASE_URL = 'https://hosp-api-ken-go-cf8ea894c5d3.herokuapp.com';//'http://localhost:3000';//'https://krkkng.com/hospitalization/web/hosp_api/api'; // 実際の環境に合わせて変更してください
 
 const GoogleLogin = ({ onLoginSuccess, onLogout }: GoogleLoginProps) => {
   const [user, setUser] = useState<GoogleUser | null>(null);
@@ -27,12 +20,18 @@ const GoogleLogin = ({ onLoginSuccess, onLogout }: GoogleLoginProps) => {
   const [error, setError] = useState<string | null>(null);
 
   // Googleクライアント
-  const CLIENT_ID = '647090775844-hlv5firan96f9augrh35mtheoboa786l.apps.googleusercontent.com';
-
+  const CLIENT_ID = '647090775844-eiqmcdrfokfc8jnpfdhbvbr8g7sa4ncs.apps.googleusercontent.com';
+  // 正確なリダイレクトURI（vite.config.tsのbaseパスを含む）
+  // GoogleLogin.tsx
+  const REDIRECT_URI = 'http://localhost:5173';
+   
+  console.log('REDIRECT_URI:', REDIRECT_URI);
   // Googleボタンのレンダリング関数
   const renderGoogleButton = () => {
     if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
       console.error('Google認証APIが利用できません');
+      setError('Google認証APIを読み込めませんでした。ブラウザの設定やネットワーク接続を確認してください。');
+      setIsLoading(false);
       return;
     }
 
@@ -47,6 +46,7 @@ const GoogleLogin = ({ onLoginSuccess, onLogout }: GoogleLoginProps) => {
       client_id: CLIENT_ID,
       scope: 'email profile https://www.googleapis.com/auth/calendar.readonly',
       ux_mode: 'popup',
+      redirect_uri: REDIRECT_URI, // 正確なリダイレクトURI
       callback: async (response: { code?: string; error?: string }) => {
         if (response.error) {
           console.error('OAuth認証エラー:', response.error);
@@ -63,61 +63,45 @@ const GoogleLogin = ({ onLoginSuccess, onLogout }: GoogleLoginProps) => {
         }
 
         try {
-          // 認証コードをトークンに交換する（本来はサーバーサイドで行うべき処理）
-          // この例では簡易的にクライアントで処理しています
-          // tokenEndpointは実際のアプリケーションではサーバーサイドAPIになります
-          const tokenEndpoint = 'https://oauth2.googleapis.com/token';
-          const tokenResponse = await fetch(tokenEndpoint, {
+          // 認証コードをバックエンドに送信してトークンを取得
+          console.log('認証コードをバックエンドに送信:', response.code);
+          const tokenResponse = await fetch(`${API_BASE_URL}/api/auth/google/callback`, {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
+              'Content-Type': 'application/json',
             },
-            body: new URLSearchParams({
-              code: response.code,
-              client_id: CLIENT_ID,
-              // 実際のアプリではこれはサーバーサイドにあるべきです
-              client_secret: '',
-              redirect_uri: window.location.origin,
-              grant_type: 'authorization_code',
-            }),
+            body: JSON.stringify({ code: response.code }),
+            credentials: 'include'
           });
-
-          const tokenData = await tokenResponse.json();
-          if (tokenData.error) {
-            throw new Error(`トークン取得エラー: ${tokenData.error}`);
+          console.log("tokenResponse:", tokenResponse);
+          if (!tokenResponse.ok) {
+            const errorData = await tokenResponse.json();
+            console.error('トークン取得エラー:', errorData);
+            throw new Error(errorData.error || `サーバーエラー: ${tokenResponse.status}`);
           }
 
-          // ユーザー情報を取得
-          const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-            headers: {
-              Authorization: `Bearer ${tokenData.access_token}`,
-            },
-          });
-
-          const userInfo = await userInfoResponse.json();
-          const userData: GoogleUser = {
-            email: userInfo.email,
-            name: userInfo.name,
-            picture: userInfo.picture,
-          };
+          const authData = await tokenResponse.json();
 
           // ユーザー情報とトークンを保存
+          const userData = authData.user;
+          const accessToken = authData.access_token;
+
           setUser(userData);
-          localStorage.setItem('google_calendar_token', tokenData.access_token);
-          
+          localStorage.setItem('google_calendar_token', accessToken);
+
           // リフレッシュトークンがあれば保存
-          if (tokenData.refresh_token) {
-            localStorage.setItem('google_refresh_token', tokenData.refresh_token);
+          if (authData.refresh_token) {
+            localStorage.setItem('google_refresh_token', authData.refresh_token);
           }
-          
+
           // 親コンポーネントに通知
-          onLoginSuccess(userData, tokenData.access_token);
-          
+          onLoginSuccess(userData, accessToken);
+
           console.log('認証成功:', userData);
           setIsLoading(false);
         } catch (err) {
           console.error('認証処理中にエラーが発生しました:', err);
-          setError('認証処理中にエラーが発生しました');
+          setError(err instanceof Error ? err.message : '認証処理中にエラーが発生しました');
           setIsLoading(false);
         }
       },
@@ -133,67 +117,97 @@ const GoogleLogin = ({ onLoginSuccess, onLogout }: GoogleLoginProps) => {
       </svg>
       Googleでログイン（カレンダー連携）
     `;
-    
+
     loginButton.onclick = () => {
       setIsLoading(true);
+      setError(null);
       client.requestCode();
     };
-    
+
     buttonElement.appendChild(loginButton);
+  };
+
+  // トークンをリフレッシュする関数
+  const refreshToken = async (refreshToken: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/google/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('トークンのリフレッシュに失敗しました');
+      }
+
+      const data = await response.json();
+      return data.access_token;
+    } catch (error) {
+      console.error('トークンリフレッシュエラー:', error);
+      throw error;
+    }
   };
 
   useEffect(() => {
     // Google OAuth 2.0 クライアントをロードする
     const loadGoogleScript = () => {
       setIsLoading(true);
-      
+
       // すでにスクリプトが読み込まれている場合は処理をスキップ
       if (document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
         console.log('Google認証スクリプトはすでに読み込まれています');
-        initializeGoogleLogin();
+        setTimeout(() => {
+          initializeGoogleLogin();
+        }, 1000); // より長めの遅延を設定
         return;
       }
-      
+
       const script = document.createElement('script');
       script.src = 'https://accounts.google.com/gsi/client';
       script.async = true;
       script.defer = true;
       script.onload = () => {
         console.log('Google認証スクリプトが読み込まれました');
-        initializeGoogleLogin();
+        setTimeout(() => {
+          initializeGoogleLogin();
+        }, 1000); // より長めの遅延を設定
       };
       script.onerror = () => {
         console.error('Google認証スクリプトの読み込みに失敗しました');
+        setError('Google認証スクリプトの読み込みに失敗しました。ネットワーク接続を確認してください。');
         setIsLoading(false);
       };
       document.body.appendChild(script);
     };
 
     const initializeGoogleLogin = () => {
-      // スクリプトがロードされるまで少し待つ
-      setTimeout(() => {
-        if (window.google && window.google.accounts && window.google.accounts.oauth2) {
-          try {
-            // ユーザーが未ログインの場合のみボタンをレンダリング
-            if (!user) {
-              renderGoogleButton();
-            }
-            setIsLoading(false);
-          } catch (error) {
-            console.error('Google認証の初期化中にエラーが発生しました:', error);
-            setIsLoading(false);
+      if (window.google && window.google.accounts && window.google.accounts.oauth2) {
+        try {
+          // ユーザーが未ログインの場合のみボタンをレンダリング
+          if (!user) {
+            renderGoogleButton();
           }
-        } else {
-          console.error('window.google.accounts.oauth2 オブジェクトが利用できません');
+          setIsLoading(false);
+        } catch (error) {
+          console.error('Google認証の初期化中にエラーが発生しました:', error);
+          setError('Google認証の初期化中にエラーが発生しました');
           setIsLoading(false);
         }
-      }, 300);
+      } else {
+        console.error('window.google.accounts.oauth2 オブジェクトが利用できません');
+        setError('Google認証APIを読み込めませんでした');
+        setIsLoading(false);
+      }
     };
 
     // ローカルストレージからトークンを確認
     const checkExistingToken = async () => {
       const calendarToken = localStorage.getItem('google_calendar_token');
-      
+      const refreshTokenValue = localStorage.getItem('google_refresh_token');
+
       if (calendarToken) {
         try {
           // トークンの有効性を確認（ユーザー情報を取得できるか）
@@ -202,7 +216,7 @@ const GoogleLogin = ({ onLoginSuccess, onLogout }: GoogleLoginProps) => {
               Authorization: `Bearer ${calendarToken}`,
             },
           });
-          
+
           if (userInfoResponse.ok) {
             const userInfo = await userInfoResponse.json();
             const userData: GoogleUser = {
@@ -210,14 +224,47 @@ const GoogleLogin = ({ onLoginSuccess, onLogout }: GoogleLoginProps) => {
               name: userInfo.name,
               picture: userInfo.picture,
             };
-            
+
             setUser(userData);
             onLoginSuccess(userData, calendarToken);
             console.log('既存のトークンで認証成功:', userData);
+          } else if (refreshTokenValue) {
+            // トークンが無効でリフレッシュトークンがある場合は、トークンをリフレッシュ
+            try {
+              const newToken = await refreshToken(refreshTokenValue);
+
+              // 新しいトークンでユーザー情報を取得
+              const refreshedUserInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                headers: {
+                  Authorization: `Bearer ${newToken}`,
+                },
+              });
+
+              if (refreshedUserInfoResponse.ok) {
+                const userInfo = await refreshedUserInfoResponse.json();
+                const userData: GoogleUser = {
+                  email: userInfo.email,
+                  name: userInfo.name,
+                  picture: userInfo.picture,
+                };
+
+                setUser(userData);
+                localStorage.setItem('google_calendar_token', newToken);
+                onLoginSuccess(userData, newToken);
+                console.log('リフレッシュトークンで認証成功:', userData);
+              } else {
+                // リフレッシュしたがユーザー情報を取得できない場合
+                throw new Error('リフレッシュしたトークンが無効です');
+              }
+            } catch (refreshError) {
+              // リフレッシュに失敗した場合は全てのトークンをクリア
+              localStorage.removeItem('google_calendar_token');
+              localStorage.removeItem('google_refresh_token');
+              console.error('トークンのリフレッシュに失敗しました:', refreshError);
+            }
           } else {
-            // トークンが無効なら削除
+            // トークンが無効でリフレッシュトークンもない場合はトークンをクリア
             localStorage.removeItem('google_calendar_token');
-            localStorage.removeItem('google_refresh_token');
             console.log('保存されたトークンが無効です。再ログインが必要です。');
           }
         } catch (error) {
@@ -230,7 +277,7 @@ const GoogleLogin = ({ onLoginSuccess, onLogout }: GoogleLoginProps) => {
 
     checkExistingToken();
     loadGoogleScript();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // 初回マウント時のみ実行
 
   // ログアウト後にボタンを再レンダリングするための効果
@@ -238,49 +285,49 @@ const GoogleLogin = ({ onLoginSuccess, onLogout }: GoogleLoginProps) => {
     if (!user && window.google && window.google.accounts) {
       // ユーザーがログアウトした後で、GoogleAPIが利用可能な場合
       console.log('ユーザーがログアウトしました。ボタンを再レンダリングします');
-      
+
       // 少し遅延を入れて、DOM更新後に実行
       setTimeout(() => {
         renderGoogleButton();
-      }, 100);
+      }, 500);
     }
   }, [user]); // user状態が変化したときに実行
 
   const handleLogout = () => {
     // ユーザー情報をクリア
     setUser(null);
-    
+
     // ローカルストレージからトークンを削除
     localStorage.removeItem('google_calendar_token');
     localStorage.removeItem('google_refresh_token');
-    
+
     // Google認証をリセット
     if (window.google?.accounts?.id) {
       window.google.accounts.id.disableAutoSelect();
     }
-    
+
     // 親コンポーネントにログアウトを通知
     onLogout();
-    
+
     console.log('ログアウトしました');
   };
 
   return (
     <div className="flex flex-col items-center justify-center p-6 space-y-4">
       <h2 className="text-2xl font-bold">Google アカウント連携</h2>
-      
+
       {error && (
         <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 w-full">
           <p>{error}</p>
-          <button 
-            onClick={() => setError(null)} 
+          <button
+            onClick={() => setError(null)}
             className="text-sm text-red-700 underline mt-2"
           >
             閉じる
           </button>
         </div>
       )}
-      
+
       {/* ユーザーがログインしていない場合のみ表示 */}
       {user === null && <div id="googleLoginButton" style={{ minHeight: '50px', minWidth: '250px' }}></div>}
 
@@ -301,7 +348,7 @@ const GoogleLogin = ({ onLoginSuccess, onLogout }: GoogleLoginProps) => {
             <p className="text-gray-500 text-sm">{user.email}</p>
             <p className="text-green-600 mt-2">✓ カレンダーへのアクセス権限あり</p>
           </div>
-          
+
           <button
             onClick={handleLogout}
             className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
