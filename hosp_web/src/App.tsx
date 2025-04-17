@@ -17,6 +17,8 @@ interface GoogleUser {
 function App() {
   const [user, setUser] = useState<GoogleUser | null>(null);
   const [token, setToken] = useState<string>("");
+  // モーダルの表示状態を管理
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
   // ログイン成功時の処理
   const handleLoginSuccess = (userData: GoogleUser, accessToken: string) => {
@@ -30,6 +32,11 @@ function App() {
     setUser(null);
     setToken("");
     console.log("App: ログアウト");
+  };
+
+  // モーダル表示状態の更新ハンドラ
+  const handleModalStateChange = (isOpen: boolean) => {
+    setIsModalOpen(isOpen);
   };
 
   return (
@@ -64,8 +71,12 @@ function App() {
       {/* コンテンツエリアの余白を削減 */}
       <main className="w-full mx-auto py-2 px-1 sm:px-3 md:px-4">
         <div className="py-2">
-          {/* 複数カレンダー表示コンポーネント */}
-          <MultiCalendarView user={user} token={token} />
+          {/* 複数カレンダー表示コンポーネント - モーダル状態変更ハンドラを渡す */}
+          <MultiCalendarView 
+            user={user} 
+            token={token} 
+            onModalStateChange={handleModalStateChange}
+          />
         </div>
       </main>
 
@@ -76,8 +87,8 @@ function App() {
           </p>
         </div>
       </footer>
-      {/* ScrollToTopButtonコンポーネントを追加 */}
-      <ScrollToTopButton />
+      {/* ScrollToTopButtonコンポーネントを追加 - モーダル表示状態を渡す */}
+      <ScrollToTopButton isModalOpen={isModalOpen} />
     </div>
   );
 }

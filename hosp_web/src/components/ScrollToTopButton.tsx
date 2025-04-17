@@ -1,11 +1,17 @@
 // src/components/ScrollToTopButton.tsx
 import { useState, useEffect } from 'react';
 
+interface ScrollToTopButtonProps {
+  // モーダルが開いているかどうかのプロパティを追加
+  isModalOpen: boolean;
+}
+
 /**
  * スクロールトップボタンコンポーネント
  * スマートフォン表示時に画面右下に固定表示され、クリックするとページ上部に戻るボタン
+ * モーダルが表示されている時は非表示になる
  */
-const ScrollToTopButton = () => {
+const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = ({ isModalOpen }) => {
   // ボタンの表示・非表示を管理するstate
   const [isVisible, setIsVisible] = useState(false);
   // モバイル表示かどうかを管理するstate
@@ -57,8 +63,11 @@ const ScrollToTopButton = () => {
     });
   };
 
-  // モバイル表示でない場合、または表示条件を満たさない場合は何も表示しない
-  if (!isMobile || !isVisible) {
+  // 以下の条件のいずれかに該当する場合は何も表示しない
+  // 1. モバイル表示でない場合
+  // 2. スクロール位置が浅い場合
+  // 3. モーダルが表示されている場合
+  if (!isMobile || !isVisible || isModalOpen) {
     return null;
   }
 

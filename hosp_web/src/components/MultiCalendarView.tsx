@@ -22,6 +22,7 @@ interface GoogleUser {
 interface MultiCalendarViewProps {
   user: GoogleUser | null;
   token: string;
+  onModalStateChange: (isOpen: boolean) => void;
 }
 
 // カレンダー情報を定義
@@ -157,6 +158,7 @@ const generateMonthDates = (month: Date): Date[] => {
 const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({
   user,
   token,
+  onModalStateChange
 }) => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -327,11 +329,13 @@ const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({
   // イベント詳細を表示
   const handleViewEventDetails = (event: CalendarEvent) => {
     setSelectedEvent(event);
+    onModalStateChange(true);
   };
 
   // イベント詳細モーダルを閉じる
   const handleCloseEventDetails = () => {
     setSelectedEvent(null);
+    onModalStateChange(false);
   };
 
   // カレンダー選択パネルの表示/非表示を切り替え
