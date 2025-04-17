@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+// src/components/MultiCalendarView.tsx
+import React, { useState, useEffect, useRef } from 'react';
 import EventCard, { CalendarEvent, shouldShowEvent, isAnnotationEvent } from './EventCard';
 import EventDetailsModal from './EventDetailsModal';
+import MiniCalendar from './MiniCalendar';
 import { isHoliday, isNationalHoliday, getHolidayName } from '../modules/holidayChecker';
 
 interface GoogleUser {
@@ -148,12 +150,17 @@ const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({ user, token }) =>
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   // モバイル向けに追加: カレンダー選択パネルの表示/非表示状態
   const [showCalendarPanel, setShowCalendarPanel] = useState(false);
+  
+  // 選択されている日付
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  
+  // 各日付カードへのref
+  const dateRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // 月を変更する関数
-  const changeMonth = (increment: number) => {
-    const newMonth = new Date(currentMonth);
-    newMonth.setMonth(newMonth.getMonth() + increment);
+  const changeMonth = (newMonth: Date) => {
     setCurrentMonth(newMonth);
+    setSelectedDate(undefined); // 月を変更したら日付選択をリセット
   };
 
   // カレンダー選択状態の切り替え
@@ -167,7 +174,7 @@ const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({ user, token }) =>
     });
   };
 
-  /// イベントを取得する関数
+  // イベントを取得する関数
   const fetchEvents = async () => {
     if (!user || !token || selectedCalendars.length === 0) {
       setEvents([]);
@@ -252,7 +259,22 @@ const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({ user, token }) =>
     }
   };
 
-  // カレンダーの全イベントを取得する関数（ページネーション対応）
+  // ミニカレンダーで日付がクリックされたときのハンドラ
+  const handleDateClick = (date: Date) => {
+    const dateKey = formatDateToYYYYMMDD(date);
+    
+    // 選択された日付を更新
+    setSelectedDate(date);
+    
+    // その日付のカードへスクロール
+    if (dateRefs.current[dateKey]) {
+      dateRefs.current[dateKey]?.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    }
+  };
+
   // 月が変わったときやカレンダー選択状態が変わったときに再取得
   useEffect(() => {
     fetchEvents();
@@ -308,7 +330,7 @@ const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({ user, token }) =>
           {/* 月ナビゲーション */}
           <div className="flex space-x-1 sm:space-x-2">
             <button 
-              onClick={() => changeMonth(-1)}
+              onClick={() => changeMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
               className="px-2 sm:px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100"
             >
               前月
@@ -323,7 +345,7 @@ const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({ user, token }) =>
               今月
             </button>
             <button 
-              onClick={() => changeMonth(1)}
+              onClick={() => changeMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
               className="px-2 sm:px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100"
             >
               次月
@@ -367,128 +389,152 @@ const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({ user, token }) =>
         </div>
       </div>
       
-      {/* 凡例 - モバイルではよりコンパクトに */}
-      <div className="flex flex-wrap gap-2 sm:gap-4 mb-3 sm:mb-4 text-xs sm:text-sm">
-        <div className="flex items-center">
-          <div className="w-3 h-3 sm:w-4 sm:h-4 bg-blue-50 border border-blue-300 mr-1 sm:mr-2"></div>
-          <span>平日</span>
+      {/* 2カラムレイアウト: ミニカレンダーと予定リスト */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        {/* ミニカレンダー（左カラム） */}
+        <div className="lg:col-span-1">
+          <MiniCalendar 
+            currentMonth={currentMonth} 
+            onMonthChange={changeMonth}
+            onDateClick={handleDateClick}
+            selectedDate={selectedDate}
+          />
+          
+          {/* 凡例 - モバイルではよりコンパクトに */}
+          <div className="flex flex-wrap gap-2 sm:gap-4 mt-3 mb-3 sm:mb-4 text-xs sm:text-sm">
+            <div className="flex items-center">
+              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-blue-50 border border-blue-300 mr-1 sm:mr-2"></div>
+              <span>平日</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-red-100 border border-red-300 mr-1 sm:mr-2"></div>
+              <span>日曜・祝日</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-amber-100 border border-amber-300 mr-1 sm:mr-2"></div>
+              <span>土曜日</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-blue-500 bg-white mr-1 sm:mr-2"></div>
+              <span>今日</span>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center">
-          <div className="w-3 h-3 sm:w-4 sm:h-4 bg-red-100 border border-red-300 mr-1 sm:mr-2"></div>
-          <span>日曜・祝日</span>
-        </div>
-        <div className="flex items-center">
-          <div className="w-3 h-3 sm:w-4 sm:h-4 bg-amber-100 border border-amber-300 mr-1 sm:mr-2"></div>
-          <span>土曜日</span>
-        </div>
-        <div className="flex items-center">
-          <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-blue-500 bg-white mr-1 sm:mr-2"></div>
-          <span>今日</span>
+        
+        {/* イベントリスト（右カラム） */}
+        <div className="lg:col-span-3">
+          {error && (
+            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-2 sm:p-4 my-2 sm:my-4 text-sm">
+              <p className="font-bold">エラー</p>
+              <p>{error}</p>
+              <button 
+                onClick={() => setError(null)}
+                className="text-xs underline mt-1"
+              >
+                閉じる
+              </button>
+            </div>
+          )}
+
+          {isLoading ? (
+            <div className="flex justify-center items-center p-4 sm:p-8">
+              <svg className="animate-spin h-6 w-6 sm:h-8 sm:w-8 text-blue-500 mr-2 sm:mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>予定を読み込み中...</span>
+            </div>
+          ) : events.length === 0 ? (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 sm:p-4 my-2 sm:my-4 text-sm">
+              <p className="font-medium">予定はありません</p>
+              <p className="text-xs sm:text-sm mt-1 sm:mt-2">
+                {selectedCalendars.length === 0 
+                  ? 'カレンダーが選択されていません。上のチェックボックスから表示するカレンダーを選択してください。' 
+                  : 'この月の予定はありません。Googleカレンダーで予定を追加できます。'}
+              </p>
+            </div>
+          ) : (
+            // 日付カードのグリッド - 余白を小さく
+            <div className="space-y-4">
+              {/* 日付ごとのカード */}
+              {monthDates.map(date => {
+                const dateKey = formatDateToYYYYMMDD(date);
+                const dayEvents = groupedEvents[dateKey] || [];
+                const today = new Date();
+                const isToday = date.getDate() === today.getDate() && 
+                               date.getMonth() === today.getMonth() && 
+                               date.getFullYear() === today.getFullYear();
+                
+                // この日付に優先イベントがあるかチェック
+                const hasPriorityEvent = dayEvents.some(event => event.isPriority);
+                
+                // 土日または祝日かどうかをチェック
+                const isHolidayDate = isHoliday(date);
+                void isHolidayDate;
+                const isSundayOrHoliday = date.getDay() === 0 || isNationalHoliday(date);
+                const isSaturday = date.getDay() === 6;
+                
+                // 日付パネルの背景色を決定
+                let dateBgClass = 'bg-blue-50'; // 平日の背景色
+                
+                if (isSundayOrHoliday) { // 日曜または祝日
+                  dateBgClass = 'bg-red-100';
+                } else if (isSaturday) { // 土曜日
+                  dateBgClass = 'bg-amber-100';
+                }
+                
+                // 祝日名を取得
+                const holidayName = getHolidayName(date);
+                
+                // 選択された日付かどうか
+                const isSelected = selectedDate && 
+                                 date.getDate() === selectedDate.getDate() && 
+                                 date.getMonth() === selectedDate.getMonth() && 
+                                 date.getFullYear() === selectedDate.getFullYear();
+                
+                return (
+                  <div 
+                    key={dateKey} 
+                    className={`border rounded-lg overflow-hidden ${isToday ? 'border-blue-500 ring-1 ring-blue-200' : isSelected ? 'border-blue-400 ring-1 ring-blue-300' : hasPriorityEvent ? 'border-red-300 ring-1 ring-red-100' : 'border-gray-200'}`}
+                    ref={el => dateRefs.current[dateKey] = el}
+                    id={`date-${dateKey}`}
+                  >
+                    {/* 日付ヘッダー - よりコンパクトに */}
+                    <div className={`p-2 ${isToday ? 'bg-blue-500 text-white' : isSelected ? 'bg-blue-400 text-white' : dateBgClass}`}>
+                      <div className="flex justify-between items-center">
+                        <h3 className="font-medium text-sm sm:text-base">
+                          {formatDateForDisplay(date)}
+                        </h3>
+                        {holidayName && (
+                          <span className="text-xs font-medium text-red-700">
+                            {holidayName}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* イベントリスト - パディングを小さく */}
+                    <div className="p-1 sm:p-2">
+                      {dayEvents.length > 0 ? (
+                        dayEvents.map(event => (
+                          <EventCard 
+                            key={event.id} 
+                            event={event} 
+                            onViewDetails={handleViewEventDetails}
+                            calendarStyles={CALENDAR_STYLES}
+                          />
+                        ))
+                      ) : (
+                        <p className="text-xs sm:text-sm text-gray-500 italic p-1 sm:p-2">予定なし</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
-      
-      {error && (
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-2 sm:p-4 my-2 sm:my-4 text-sm">
-          <p className="font-bold">エラー</p>
-          <p>{error}</p>
-          <button 
-            onClick={() => setError(null)}
-            className="text-xs underline mt-1"
-          >
-            閉じる
-          </button>
-        </div>
-      )}
-
-      {isLoading ? (
-        <div className="flex justify-center items-center p-4 sm:p-8">
-          <svg className="animate-spin h-6 w-6 sm:h-8 sm:w-8 text-blue-500 mr-2 sm:mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <span>予定を読み込み中...</span>
-        </div>
-      ) : events.length === 0 ? (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 sm:p-4 my-2 sm:my-4 text-sm">
-          <p className="font-medium">予定はありません</p>
-          <p className="text-xs sm:text-sm mt-1 sm:mt-2">
-            {selectedCalendars.length === 0 
-              ? 'カレンダーが選択されていません。上のチェックボックスから表示するカレンダーを選択してください。' 
-              : 'この月の予定はありません。Googleカレンダーで予定を追加できます。'}
-          </p>
-        </div>
-      ) : (
-        // 日付カードのグリッド - 余白を小さく
-        <div className="grid gap-2 sm:gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {/* 日付ごとのカード */}
-          {monthDates.map(date => {
-            const dateKey = formatDateToYYYYMMDD(date);
-            const dayEvents = groupedEvents[dateKey] || [];
-            const today = new Date();
-            const isToday = date.getDate() === today.getDate() && 
-                           date.getMonth() === today.getMonth() && 
-                           date.getFullYear() === today.getFullYear();
-            
-            // この日付に優先イベントがあるかチェック
-            const hasPriorityEvent = dayEvents.some(event => event.isPriority);
-            
-            // 土日または祝日かどうかをチェック
-            const isHolidayDate = isHoliday(date);
-            void isHolidayDate;
-            const isSundayOrHoliday = date.getDay() === 0 || isNationalHoliday(date);
-            const isSaturday = date.getDay() === 6;
-            
-            // 日付パネルの背景色を決定
-            let dateBgClass = 'bg-blue-50'; // 平日の背景色
-            
-            if (isSundayOrHoliday) { // 日曜または祝日
-              dateBgClass = 'bg-red-100';
-            } else if (isSaturday) { // 土曜日
-              dateBgClass = 'bg-amber-100';
-            }
-            
-            // 祝日名を取得
-            const holidayName = getHolidayName(date);
-            
-            return (
-              <div 
-                key={dateKey} 
-                className={`border rounded-lg overflow-hidden ${isToday ? 'border-blue-500 ring-1 ring-blue-200' : hasPriorityEvent ? 'border-red-300 ring-1 ring-red-100' : 'border-gray-200'}`}
-              >
-                {/* 日付ヘッダー - よりコンパクトに */}
-                <div className={`p-2 ${isToday ? 'bg-blue-500 text-white' : dateBgClass}`}>
-                  <div className="flex justify-between items-center">
-                    <h3 className="font-medium text-sm sm:text-base">
-                      {formatDateForDisplay(date)}
-                    </h3>
-                    {holidayName && (
-                      <span className="text-xs font-medium text-red-700">
-                        {holidayName}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                
-                {/* イベントリスト - パディングを小さく */}
-                <div className="p-1 sm:p-2">
-                  {dayEvents.length > 0 ? (
-                    dayEvents.map(event => (
-                      <EventCard 
-                        key={event.id} 
-                        event={event} 
-                        onViewDetails={handleViewEventDetails}
-                        calendarStyles={CALENDAR_STYLES}
-                      />
-                    ))
-                  ) : (
-                    <p className="text-xs sm:text-sm text-gray-500 italic p-1 sm:p-2">予定なし</p>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
       
       {/* イベント詳細モーダル */}
       {selectedEvent && (
