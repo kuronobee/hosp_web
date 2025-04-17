@@ -1,5 +1,5 @@
 // src/components/EventDetailsModal.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, ReactElement } from "react";
 import { CalendarEvent } from "./EventCard";
 
 interface EventDetailsModalProps {
@@ -353,7 +353,7 @@ const InfoRow: React.FC<{
   multiline?: boolean;
   children: React.ReactNode;
 }> = ({ icon, color, badge, multiline, children }) => {
-  const icons: Record<string, JSX.Element> = {
+  const icons: Record<string, ReactElement> = {
     calendar: (
       <path
         strokeLinecap="round"

@@ -567,7 +567,9 @@ const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({
                         ? "border-red-300 ring-1 ring-red-100"
                         : "border-gray-200"
                     }`}
-                    ref={(el) => (dateRefs.current[dateKey] = el)}
+                    ref={(el: HTMLDivElement | null) => {
+                      dateRefs.current[dateKey] = el; // ここで代入
+                    }} // ← 関数の戻り値は undefined（void）
                     id={`date-${dateKey}`}
                   >
                     {/* 日付ヘッダー - よりコンパクトに */}

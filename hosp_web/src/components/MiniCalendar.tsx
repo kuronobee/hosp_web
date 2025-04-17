@@ -1,6 +1,6 @@
 // src/components/MiniCalendar.tsx
 import React, { useState, useEffect } from 'react';
-import { isHoliday, isNationalHoliday } from '../modules/holidayChecker';
+import { isNationalHoliday } from '../modules/holidayChecker';
 
 interface MiniCalendarProps {
   currentMonth: Date;
