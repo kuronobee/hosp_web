@@ -1,4 +1,6 @@
+// src/components/EventCard.tsx
 import React from 'react';
+import { getDoctorColor } from '../config/doctorColorConfig';
 
 // イベントの型定義
 export interface CalendarEvent {
@@ -39,6 +41,7 @@ const formatTime = (dateTimeStr: string | undefined): string => {
     hour12: false
   });
 };
+
 // HTMLエンティティをデコード
 const decodeEntities = (text: string): string => {
     return text
@@ -65,7 +68,6 @@ export const isAnnotationEvent = (event: CalendarEvent): boolean => {
 
 export const isScheduleEvent = (event: CalendarEvent): boolean => {
   if (!event.summary) return false;
-  console.log("@で始まる?", event.summary.startsWith('@'));
   // @で始まるイベントを優先
   return event.summary.startsWith('@') || !isAllDayEvent(event);
 }
@@ -77,6 +79,19 @@ export const shouldShowEvent = (event: CalendarEvent): boolean => {
     return false;
   }
   return true;
+};
+
+// イベントの説明から主治医情報を取得
+const getDoctorInfo = (event: CalendarEvent): { name: string | null } => {
+  if (!event.description) return { name: null };
+  
+  const decodedDesc = decodeEntities(event.description);
+  
+  // 主治医名を抽出（<主治医>タグがあれば）
+  const doctorNameMatch = decodedDesc.match(/<主治医>(.*?)<\/主治医>/);
+  const doctorName = doctorNameMatch ? doctorNameMatch[1].trim() : null;
+  
+  return { name: doctorName };
 };
 
 const EventCard: React.FC<EventCardProps> = ({ event, onViewDetails, calendarStyles }) => {
@@ -91,6 +106,12 @@ const EventCard: React.FC<EventCardProps> = ({ event, onViewDetails, calendarSty
   // 終日イベントか時間指定イベントかを判定
   const allDay = isAllDayEvent(event);
   
+  // 主治医情報を取得
+  const doctorInfo = getDoctorInfo(event);
+  
+  // 主治医名に基づいてボーダー色を決定（別ファイルの関数を使用）
+  const doctorBorderColor = getDoctorColor(doctorInfo.name);
+  
   // 時間文字列を作成
   const timeString = allDay 
     ? '' 
@@ -98,7 +119,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onViewDetails, calendarSty
 
   return (
     <div 
-      className={`shadow-sm p-2 mb-1 sm:p-3 sm:mb-2 ${!isPriority && !isSchedule ? 'border-l-4' : ''} ${isPriority ? 'border-red-500' : 'border-gray-300'} ${calendarBgClass} hover:shadow-md transition-shadow cursor-pointer ${isPriority ? 'bg-red-50' : ''}`}
+      className={`shadow-sm p-2 mb-1 sm:p-3 sm:mb-2 ${!isPriority && !isSchedule ? 'border-l-4' : ''} ${isPriority ? 'border-red-500' : doctorBorderColor} ${calendarBgClass} hover:shadow-md transition-shadow cursor-pointer ${isPriority ? 'bg-red-50' : ''}`}
       onClick={() => onViewDetails(event)}
     >
       <div className="flex flex-col">
@@ -112,6 +133,13 @@ const EventCard: React.FC<EventCardProps> = ({ event, onViewDetails, calendarSty
           {isPriority && (
             <span className="px-1 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 text-right">
               重要
+            </span>
+          )}
+          
+          {/* 主治医名があれば表示 */}
+          {doctorInfo.name && (
+            <span className="text-xs italic text-gray-600 ml-auto">
+              Dr. {doctorInfo.name}
             </span>
           )}
         </div>
