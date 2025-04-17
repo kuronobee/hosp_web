@@ -64,7 +64,7 @@ export const isAnnotationEvent = (event: CalendarEvent): boolean => {
 };
 export const isScheduleEvent = (event: CalendarEvent): boolean => {
   if (!event.summary) return false;
-  
+  console.log("@で始まる?", event.summary.startsWith('@'));
   // @で始まるイベントを優先
   return event.summary.startsWith('@');
 }
@@ -109,7 +109,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onViewDetails, calendarSty
 
   return (
     <div 
-      className={`shadow-sm p-3 mb-2 ${!isPriority || isSchedule ? 'border-l-10' : ''} ${isPriority ? 'border-red-500' : 'border-gray-300'} ${calendarBgClass} hover:shadow-md transition-shadow cursor-pointer ${isPriority ? 'bg-red-50' : ''}`}
+      className={`shadow-sm p-3 mb-2 ${!isPriority && !isSchedule ? 'border-l-10' : ''} ${isPriority ? 'border-red-500' : 'border-gray-300'} ${calendarBgClass} hover:shadow-md transition-shadow cursor-pointer ${isPriority ? 'bg-red-50' : ''}`}
       onClick={() => onViewDetails(event)}
     >
       <div className="flex flex-col">
