@@ -29,13 +29,14 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 m-0">
       <header className="bg-white shadow relative">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">病院カレンダーアプリ</h1>
+        {/* ヘッダーの余白を削減、特に小さい画面では左右の余白を小さく */}
+        <div className="w-full mx-auto py-3 px-2 sm:px-4 md:px-6 flex justify-between items-center">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 truncate">病院カレンダー</h1>
           
           {/* 右上にコンパクトなGoogle連携コンポーネント配置 */}
-          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10">
+          <div className="z-10">
             <GoogleLogin 
               onLoginSuccess={handleLoginSuccess} 
               onLogout={handleLogout} 
@@ -44,8 +45,9 @@ function App() {
         </div>
       </header>
       
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-2 sm:px-0">
+      {/* コンテンツエリアの余白を削減 */}
+      <main className="w-full mx-auto py-2 px-1 sm:px-3 md:px-4">
+        <div className="py-2">
           {/* 複数カレンダー表示コンポーネント */}
           <MultiCalendarView 
             user={user} 
@@ -54,9 +56,9 @@ function App() {
         </div>
       </main>
       
-      <footer className="bg-white shadow mt-8 py-4">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-gray-500 text-sm">
+      <footer className="bg-white shadow mt-4 py-2">
+        <div className="w-full mx-auto px-2 sm:px-4">
+          <p className="text-center text-gray-500 text-xs">
             © 2025 病院カレンダーアプリ - 医局予定表
           </p>
         </div>

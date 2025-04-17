@@ -146,6 +146,8 @@ const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({ user, token }) =>
     CALENDARS.filter(cal => cal.defaultSelected).map(cal => cal.id)
   );
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  // モバイル向けに追加: カレンダー選択パネルの表示/非表示状態
+  const [showCalendarPanel, setShowCalendarPanel] = useState(false);
 
   // 月を変更する関数
   const changeMonth = (increment: number) => {
@@ -269,43 +271,45 @@ const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({ user, token }) =>
     setSelectedEvent(null);
   };
 
+  // カレンダー選択パネルの表示/非表示を切り替え
+  const toggleCalendarPanel = () => {
+    setShowCalendarPanel(!showCalendarPanel);
+  };
+
   if (!user || !token) {
     return (
-      <div className="mt-6 p-4 border border-gray-300 rounded bg-gray-50 text-center">
+      <div className="mt-4 p-3 border border-gray-300 rounded bg-gray-50 text-center">
         <p>Googleアカウントにログインするとカレンダーの予定が表示されます</p>
       </div>
     );
   }
 
   return (
-    <div className="mt-6 border border-gray-200 rounded-lg p-6 bg-white shadow-sm">
-      {/* カレンダーヘッダー */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <h2 className="text-xl font-bold text-gray-800">
-          {currentMonth.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' })}
-        </h2>
-        
-        <div className="flex flex-col md:flex-row gap-4">
-          {/* カレンダー選択チェックボックス */}
-          <div className="flex flex-wrap gap-3">
-            {CALENDARS.map(calendar => (
-              <label key={calendar.id} className={`flex items-center cursor-pointer p-2 rounded ${CALENDAR_STYLES[calendar.id]} border`}>
-                <input
-                  type="checkbox"
-                  checked={selectedCalendars.includes(calendar.id)}
-                  onChange={() => toggleCalendar(calendar.id)}
-                  className="mr-2"
-                />
-                <span>{calendar.name}</span>
-              </label>
-            ))}
-          </div>
+    <div className="mt-2 border border-gray-200 rounded-lg p-3 sm:p-4 md:p-6 bg-white shadow-sm">
+      {/* カレンダーヘッダー - スマートフォンではコンパクトに */}
+      <div className="mb-3 sm:mb-6">
+        {/* 月表示と操作ボタン */}
+        <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-800">
+            {currentMonth.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' })}
+          </h2>
+          
+          {/* モバイル向けカレンダー選択ボタン */}
+          <button 
+            onClick={toggleCalendarPanel}
+            className="md:hidden px-2 py-1 bg-blue-500 text-white rounded-md text-sm flex items-center"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            カレンダー選択
+          </button>
           
           {/* 月ナビゲーション */}
-          <div className="flex space-x-2">
+          <div className="flex space-x-1 sm:space-x-2">
             <button 
               onClick={() => changeMonth(-1)}
-              className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100"
+              className="px-2 sm:px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100"
             >
               前月
             </button>
@@ -314,47 +318,82 @@ const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({ user, token }) =>
                 const now = new Date();
                 setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1));
               }}
-              className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100"
+              className="px-2 sm:px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100"
             >
               今月
             </button>
             <button 
               onClick={() => changeMonth(1)}
-              className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100"
+              className="px-2 sm:px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100"
             >
               次月
             </button>
           </div>
         </div>
+
+        {/* モバイル向けカレンダー選択パネル (スライドダウン) */}
+        {showCalendarPanel && (
+          <div className="md:hidden mt-2 p-2 border rounded-md bg-gray-50">
+            <div className="font-medium mb-1 text-sm">表示するカレンダー：</div>
+            <div className="flex flex-wrap gap-2">
+              {CALENDARS.map(calendar => (
+                <label key={calendar.id} className={`flex items-center cursor-pointer p-1 rounded text-sm ${CALENDAR_STYLES[calendar.id]} border`}>
+                  <input
+                    type="checkbox"
+                    checked={selectedCalendars.includes(calendar.id)}
+                    onChange={() => toggleCalendar(calendar.id)}
+                    className="mr-1"
+                  />
+                  <span>{calendar.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* デスクトップ向けカレンダー選択チェックボックス */}
+        <div className="hidden md:flex flex-wrap gap-3 mt-3">
+          {CALENDARS.map(calendar => (
+            <label key={calendar.id} className={`flex items-center cursor-pointer p-2 rounded ${CALENDAR_STYLES[calendar.id]} border`}>
+              <input
+                type="checkbox"
+                checked={selectedCalendars.includes(calendar.id)}
+                onChange={() => toggleCalendar(calendar.id)}
+                className="mr-2"
+              />
+              <span>{calendar.name}</span>
+            </label>
+          ))}
+        </div>
       </div>
       
-      {/* 凡例 */}
-      <div className="flex flex-wrap gap-4 mb-4">
+      {/* 凡例 - モバイルではよりコンパクトに */}
+      <div className="flex flex-wrap gap-2 sm:gap-4 mb-3 sm:mb-4 text-xs sm:text-sm">
         <div className="flex items-center">
-          <div className="w-4 h-4 bg-blue-50 border border-blue-300 mr-2"></div>
-          <span className="text-sm">平日</span>
+          <div className="w-3 h-3 sm:w-4 sm:h-4 bg-blue-50 border border-blue-300 mr-1 sm:mr-2"></div>
+          <span>平日</span>
         </div>
         <div className="flex items-center">
-          <div className="w-4 h-4 bg-red-100 border border-red-300 mr-2"></div>
-          <span className="text-sm">日曜・祝日</span>
+          <div className="w-3 h-3 sm:w-4 sm:h-4 bg-red-100 border border-red-300 mr-1 sm:mr-2"></div>
+          <span>日曜・祝日</span>
         </div>
         <div className="flex items-center">
-          <div className="w-4 h-4 bg-amber-100 border border-amber-300 mr-2"></div>
-          <span className="text-sm">土曜日</span>
+          <div className="w-3 h-3 sm:w-4 sm:h-4 bg-amber-100 border border-amber-300 mr-1 sm:mr-2"></div>
+          <span>土曜日</span>
         </div>
         <div className="flex items-center">
-          <div className="w-4 h-4 border-2 border-blue-500 bg-white mr-2"></div>
-          <span className="text-sm">今日</span>
+          <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-blue-500 bg-white mr-1 sm:mr-2"></div>
+          <span>今日</span>
         </div>
       </div>
       
       {error && (
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 my-4">
+        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-2 sm:p-4 my-2 sm:my-4 text-sm">
           <p className="font-bold">エラー</p>
           <p>{error}</p>
           <button 
             onClick={() => setError(null)}
-            className="text-sm underline mt-2"
+            className="text-xs underline mt-1"
           >
             閉じる
           </button>
@@ -362,24 +401,25 @@ const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({ user, token }) =>
       )}
 
       {isLoading ? (
-        <div className="flex justify-center items-center p-8">
-          <svg className="animate-spin h-8 w-8 text-blue-500 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <div className="flex justify-center items-center p-4 sm:p-8">
+          <svg className="animate-spin h-6 w-6 sm:h-8 sm:w-8 text-blue-500 mr-2 sm:mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
           <span>予定を読み込み中...</span>
         </div>
       ) : events.length === 0 ? (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 my-4">
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 sm:p-4 my-2 sm:my-4 text-sm">
           <p className="font-medium">予定はありません</p>
-          <p className="text-sm mt-2">
+          <p className="text-xs sm:text-sm mt-1 sm:mt-2">
             {selectedCalendars.length === 0 
               ? 'カレンダーが選択されていません。上のチェックボックスから表示するカレンダーを選択してください。' 
               : 'この月の予定はありません。Googleカレンダーで予定を追加できます。'}
           </p>
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        // 日付カードのグリッド - 余白を小さく
+        <div className="grid gap-2 sm:gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {/* 日付ごとのカード */}
           {monthDates.map(date => {
             const dateKey = formatDateToYYYYMMDD(date);
@@ -413,12 +453,12 @@ const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({ user, token }) =>
             return (
               <div 
                 key={dateKey} 
-                className={`border rounded-lg overflow-hidden ${isToday ? 'border-blue-500 ring-2 ring-blue-200' : hasPriorityEvent ? 'border-red-300 ring-1 ring-red-100' : 'border-gray-200'}`}
+                className={`border rounded-lg overflow-hidden ${isToday ? 'border-blue-500 ring-1 ring-blue-200' : hasPriorityEvent ? 'border-red-300 ring-1 ring-red-100' : 'border-gray-200'}`}
               >
-                {/* 日付ヘッダー */}
-                <div className={`p-3 ${isToday ? 'bg-blue-500 text-white' : dateBgClass}`}>
+                {/* 日付ヘッダー - よりコンパクトに */}
+                <div className={`p-2 ${isToday ? 'bg-blue-500 text-white' : dateBgClass}`}>
                   <div className="flex justify-between items-center">
-                    <h3 className="font-medium">
+                    <h3 className="font-medium text-sm sm:text-base">
                       {formatDateForDisplay(date)}
                     </h3>
                     {holidayName && (
@@ -429,8 +469,8 @@ const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({ user, token }) =>
                   </div>
                 </div>
                 
-                {/* イベントリスト */}
-                <div className="p-3">
+                {/* イベントリスト - パディングを小さく */}
+                <div className="p-1 sm:p-2">
                   {dayEvents.length > 0 ? (
                     dayEvents.map(event => (
                       <EventCard 
@@ -441,7 +481,7 @@ const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({ user, token }) =>
                       />
                     ))
                   ) : (
-                    <p className="text-sm text-gray-500 italic p-2">予定なし</p>
+                    <p className="text-xs sm:text-sm text-gray-500 italic p-1 sm:p-2">予定なし</p>
                   )}
                 </div>
               </div>

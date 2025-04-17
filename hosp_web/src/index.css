@@ -1,5 +1,28 @@
 @import "tailwindcss";
 
+/* モバイル向けタッチ操作に最適化 */
+@media (max-width: 640px) {
+  html, body, #root {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    overscroll-behavior: none;
+  }
+  
+  /* 小さい画面では余白を減らす */
+  .sm-p-reduced {
+    padding: 0.5rem !important;
+  }
+  
+  .sm-m-reduced {
+    margin: 0.5rem !important;
+  }
+  
+  /* モバイルでは文字サイズを小さく */
+  .sm-text-compact {
+    font-size: 0.875rem !important;
+  }
+}
+
 /* モーダル関連のアニメーション */
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -74,7 +97,7 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 4px; /* モバイル向けに細く */
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -92,41 +115,101 @@
 
 /* GoogleLoginコンポーネント用アニメーション */
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+/* ユーザードロップダウン */
+.user-dropdown {
+  position: relative;
+  z-index: 50;
+}
+
+/* ユーザーアイコンのホバーエフェクト */
+.user-dropdown button:hover {
+  transform: scale(1.05);
+  transition: transform 0.2s ease;
+}
+
+/* ログインボタンの表示/非表示アニメーション */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideOut {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(20px); }
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease forwards;
+}
+
+.slide-out {
+  animation: slideOut 0.3s ease forwards;
+}
+
+/* レスポンシブ対応のグリッドレイアウト調整 */
+@media (max-width: 640px) {
+  /* 日付カードのグリッドを1列に */
+  .date-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* モバイルでスワイプしやすくする */
+  .event-card {
+    min-height: 3rem;
+    padding: 0.5rem;
   }
   
-  .animate-fadeIn {
-    animation: fadeIn 0.2s ease-out forwards;
+  /* モバイルでタップしやすくする */
+  .event-card, button, .calendar-checkbox label {
+    min-height: 2.5rem;
+    min-width: 2.5rem;
   }
   
-  /* ユーザードロップダウン */
-  .user-dropdown {
-    position: relative;
-    z-index: 50;
+  /* フォントサイズの調整 */
+  h1 { font-size: 1.25rem !important; }
+  h2 { font-size: 1.125rem !important; }
+  h3 { font-size: 1rem !important; }
+  p, div { font-size: 0.875rem !important; }
+  .text-xs { font-size: 0.75rem !important; }
+}
+
+/* 最大幅の制限を小さい画面では解除 */
+@media (max-width: 640px) {
+  .max-w-7xl {
+    max-width: 100% !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
   }
   
-  /* ユーザーアイコンのホバーエフェクト */
-  .user-dropdown button:hover {
-    transform: scale(1.05);
-    transition: transform 0.2s ease;
+  /* 余白を最小限に */
+  .container, 
+  .px-4, 
+  .px-6, 
+  .sm\:px-6, 
+  .lg\:px-8 {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
   }
-  
-  /* ログインボタンの表示/非表示アニメーション */
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateX(20px); }
-    to { opacity: 1; transform: translateX(0); }
+}
+
+/* タッチデバイス向け操作性改善 */
+@media (pointer: coarse) {
+  /* タッチターゲットサイズを大きく */
+  button, 
+  input[type="checkbox"] + label, 
+  .clickable {
+    min-height: 2.5rem !important;
+    min-width: 2.5rem !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  
-  @keyframes slideOut {
-    from { opacity: 1; transform: translateX(0); }
-    to { opacity: 0; transform: translateX(20px); }
-  }
-  
-  .slide-in {
-    animation: slideIn 0.3s ease forwards;
-  }
-  
-  .slide-out {
-    animation: slideOut 0.3s ease forwards;
-  }
+}

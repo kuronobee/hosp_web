@@ -62,30 +62,20 @@ export const isAnnotationEvent = (event: CalendarEvent): boolean => {
   // ATパラメータを探す（XML形式や他の形式も考慮）
   return decodeEntities(event.description).includes('<AT>true</AT>');
 };
+
 export const isScheduleEvent = (event: CalendarEvent): boolean => {
   if (!event.summary) return false;
   console.log("@で始まる?", event.summary.startsWith('@'));
   // @で始まるイベントを優先
   return event.summary.startsWith('@') || !isAllDayEvent(event);
 }
+
 // イベントをフィルタリングするための関数
 export const shouldShowEvent = (event: CalendarEvent): boolean => {
   // タイトルが×, @, #で始まるイベントを除外
   if (event.summary && /^[×#]/.test(event.summary)) {
     return false;
   }
-  
-//   // 時間範囲指定があるイベントを除外
-//   if (event.start.dateTime && event.end.dateTime) {
-//     const startTime = new Date(event.start.dateTime);
-//     const endTime = new Date(event.end.dateTime);
-    
-//     // 開始時間と終了時間が異なる場合（時間範囲指定あり）は除外
-//     if (endTime.getTime() - startTime.getTime() > 30 * 60 * 1000) { // 30分以上の場合は範囲指定と見なす
-//       return false;
-//     }
-//   }
-  
   return true;
 };
 
@@ -104,34 +94,35 @@ const EventCard: React.FC<EventCardProps> = ({ event, onViewDetails, calendarSty
   // 時間文字列を作成
   const timeString = allDay 
     ? '' 
-    : `スケジュール ${formatTime(event.start.dateTime)}〜${formatTime(event.end.dateTime)}`;
- 
+    : `${formatTime(event.start.dateTime)}〜${formatTime(event.end.dateTime)}`;
 
   return (
     <div 
-      className={`shadow-sm p-3 mb-2 ${!isPriority && !isSchedule ? 'border-l-10' : ''} ${isPriority ? 'border-red-500' : 'border-gray-300'} ${calendarBgClass} hover:shadow-md transition-shadow cursor-pointer ${isPriority ? 'bg-red-50' : ''}`}
+      className={`shadow-sm p-2 mb-1 sm:p-3 sm:mb-2 ${!isPriority && !isSchedule ? 'border-l-4' : ''} ${isPriority ? 'border-red-500' : 'border-gray-300'} ${calendarBgClass} hover:shadow-md transition-shadow cursor-pointer ${isPriority ? 'bg-red-50' : ''}`}
       onClick={() => onViewDetails(event)}
     >
       <div className="flex flex-col">
-        <div className="flex-1/2 items-center">
-          <span className="text-xs text-gray-600">
-            {timeString}
-          </span>
+        <div className="flex items-center justify-between">
+          {timeString && (
+            <span className="text-xs text-gray-600">
+              {timeString}
+            </span>
+          )}
           
           {isPriority && (
-            <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
-              アノテーション
+            <span className="px-1 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 text-right">
+              重要
             </span>
           )}
         </div>
         
-        <h3 className={`font-medium text-left ${isPriority ? 'text-red-800 text-sl' : 'text-gray-800'} mb-1 line-clamp-2`}>
+        <h3 className={`font-medium text-left ${isPriority ? 'text-red-800' : 'text-gray-800'} text-sm sm:text-base mb-0.5 sm:mb-1 line-clamp-2`}>
           {event.summary || '無題の予定'}
         </h3>
         
         {event.location && (
           <div className="text-xs text-gray-600 flex items-start">
-            <svg className="w-3 h-3 mr-1 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <svg className="w-3 h-3 mr-1 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
             </svg>

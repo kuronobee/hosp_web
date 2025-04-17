@@ -203,20 +203,27 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onClose })
         <div 
             className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-300 modal-overlay ${isVisible ? 'opacity-100 modal-enter' : 'opacity-0 modal-exit'}`}
             style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+            onClick={(e) => {
+                // モーダルの背景をクリックしたときに閉じる（タッチデバイス向け）
+                if (e.target === e.currentTarget) {
+                    handleClose();
+                }
+            }}
         >
             <div 
-                className={`bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col transform transition-transform duration-300 custom-scrollbar ${isVisible ? 'scale-100 modal-enter-content' : 'scale-95 modal-exit-content'}`}
+                className={`bg-white rounded-lg shadow-xl w-full mx-2 sm:mx-4 sm:max-w-lg md:max-w-2xl max-h-[90vh] flex flex-col transform transition-transform duration-300 custom-scrollbar ${isVisible ? 'scale-100 modal-enter-content' : 'scale-95 modal-exit-content'}`}
+                onClick={(e) => e.stopPropagation()}
             >
-                {/* ヘッダー */}
-                <div className="flex justify-between items-center p-4 border-b bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t-lg">
-                    <h2 className="text-xl font-semibold truncate">
+                {/* ヘッダー - よりコンパクトに */}
+                <div className="flex justify-between items-center p-3 border-b bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t-lg">
+                    <h2 className="text-lg sm:text-xl font-semibold truncate">
                         {event.summary || '無題の予定'}
                     </h2>
                     <button
                         onClick={handleClose}
-                        className="text-white hover:text-gray-200 focus:outline-none transition-colors"
+                        className="text-white hover:text-gray-200 focus:outline-none transition-colors p-1"
                     >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                     </button>
@@ -226,13 +233,13 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onClose })
                 {hasXmlData && (
                     <div className="flex border-b">
                         <button 
-                            className={`px-4 py-2 font-medium tab-transition ${currentTab === 'details' ? 'text-blue-600 border-b-2 border-blue-500' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`px-3 py-1 sm:px-4 sm:py-2 font-medium text-sm sm:text-base tab-transition ${currentTab === 'details' ? 'text-blue-600 border-b-2 border-blue-500' : 'text-gray-500 hover:text-gray-700'}`}
                             onClick={() => setCurrentTab('details')}
                         >
                             基本情報
                         </button>
                         <button 
-                            className={`px-4 py-2 font-medium tab-transition ${currentTab === 'xml' ? 'text-blue-600 border-b-2 border-blue-500' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`px-3 py-1 sm:px-4 sm:py-2 font-medium text-sm sm:text-base tab-transition ${currentTab === 'xml' ? 'text-blue-600 border-b-2 border-blue-500' : 'text-gray-500 hover:text-gray-700'}`}
                             onClick={() => setCurrentTab('xml')}
                         >
                             患者情報
@@ -240,44 +247,44 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onClose })
                     </div>
                 )}
 
-                {/* 内容 */}
-                <div className="p-4 overflow-y-auto flex-grow custom-scrollbar">
+                {/* 内容 - スクロール可能 */}
+                <div className="p-3 sm:p-4 overflow-y-auto flex-grow custom-scrollbar">
                     {currentTab === 'details' ? (
-                        <div className="space-y-4">
+                        <div className="space-y-3 sm:space-y-4">
                             {/* 日時 */}
-                            <div className="flex p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                                <div className="w-8 flex-shrink-0 text-blue-500">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <div className="flex p-1 sm:p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div className="w-6 sm:w-8 flex-shrink-0 text-blue-500">
+                                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                     </svg>
                                 </div>
-                                <div className="ml-2">
+                                <div className="ml-2 text-sm sm:text-base">
                                     <p className="text-gray-700">{formatEventTime(event)}</p>
                                 </div>
                             </div>
 
                             {/* カレンダー */}
-                            <div className="flex p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                                <div className="w-8 flex-shrink-0 text-green-500">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <div className="flex p-1 sm:p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div className="w-6 sm:w-8 flex-shrink-0 text-green-500">
+                                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                                     </svg>
                                 </div>
-                                <div className="ml-2">
+                                <div className="ml-2 text-sm sm:text-base">
                                     <p className="text-gray-700">{calendarName}</p>
                                 </div>
                             </div>
 
                             {/* 場所 */}
                             {event.location && (
-                                <div className="flex p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                                    <div className="w-8 flex-shrink-0 text-red-500">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <div className="flex p-1 sm:p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                                    <div className="w-6 sm:w-8 flex-shrink-0 text-red-500">
+                                        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                         </svg>
                                     </div>
-                                    <div className="ml-2">
+                                    <div className="ml-2 text-sm sm:text-base">
                                         <p className="text-gray-700">{event.location}</p>
                                     </div>
                                 </div>
@@ -285,13 +292,13 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onClose })
 
                             {/* 通常の説明文（XML以外） */}
                             {regularDescription && (
-                                <div className="flex p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                                    <div className="w-8 flex-shrink-0 text-purple-500">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <div className="flex p-1 sm:p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                                    <div className="w-6 sm:w-8 flex-shrink-0 text-purple-500">
+                                        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                         </svg>
                                     </div>
-                                    <div className="ml-2">
+                                    <div className="ml-2 text-sm sm:text-base">
                                         <p className="text-gray-700 whitespace-pre-line">{regularDescription}</p>
                                     </div>
                                 </div>
@@ -301,11 +308,11 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onClose })
                         // XMLデータ表示タブ - 交互に色の変わるリスト表示
                         <div className="bg-white rounded-lg">
                             {xmlData && (
-                                <div className="space-y-4">
-                                    <h3 className="font-medium text-gray-700 border-l-4 border-blue-500 pl-2">
+                                <div className="space-y-3 sm:space-y-4">
+                                    <h3 className="font-medium text-gray-700 border-l-4 border-blue-500 pl-2 text-sm sm:text-base">
                                         {xmlData.title}
                                     </h3>
-                                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                    <div className="border border-gray-200 rounded-lg overflow-hidden text-sm">
                                         {xmlData.items.map((item, index) => {
                                             // 日本語のフィールド名を取得（なければ元の名前）
                                             const displayName = FIELD_NAME_MAP[item.name] || item.name;
@@ -317,7 +324,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onClose })
                                                 // 真偽値（アノテーションフラグなど）
                                                 const isFlagActive = item.value.toLowerCase() === 'true';
                                                 valueElement = (
-                                                    <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isFlagActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                                                    <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${isFlagActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                                                         {isFlagActive ? 'オン' : 'オフ'}
                                                     </div>
                                                 );
@@ -327,7 +334,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onClose })
                                             } else if (item.type === 'gender') {
                                                 // 性別
                                                 valueElement = (
-                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                                                         item.value === '男' || item.value.toLowerCase() === 'male' ? 'bg-blue-100 text-blue-800' : 'bg-pink-100 text-pink-800'
                                                     }`}>
                                                         {item.value}
@@ -336,7 +343,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onClose })
                                             } else if (item.type === 'textarea') {
                                                 // 複数行テキスト
                                                 valueElement = (
-                                                    <div className="bg-white p-2 rounded-md text-gray-700 whitespace-pre-line text-sm mt-1 border border-gray-200">
+                                                    <div className="bg-white p-2 rounded-md text-gray-700 whitespace-pre-line text-xs sm:text-sm mt-1 border border-gray-200">
                                                         {item.value}
                                                     </div>
                                                 );
@@ -348,12 +355,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onClose })
                                             return (
                                                 <div 
                                                     key={index} 
-                                                    className={`p-3 transition-colors flex items-start ${
+                                                    className={`p-2 sm:p-3 transition-colors flex items-start ${
                                                         index % 2 === 0 ? 'bg-white' : 'bg-blue-50'
                                                     } hover:bg-blue-100`}
                                                 >
-                                                    <div className="font-medium text-gray-600 w-1/3 pr-4">{displayName}</div>
-                                                    <div className="flex-1">{valueElement}</div>
+                                                    <div className="font-medium text-gray-600 w-1/3 pr-2 sm:pr-4 text-xs sm:text-sm">{displayName}</div>
+                                                    <div className="flex-1 text-xs sm:text-sm">{valueElement}</div>
                                                 </div>
                                             );
                                         })}
@@ -364,11 +371,11 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onClose })
                     )}
                 </div>
 
-                {/* フッター */}
-                <div className="p-4 border-t bg-gray-50 rounded-b-lg flex justify-end">
+                {/* フッター - 小さな画面向けに最適化 */}
+                <div className="p-3 sm:p-4 border-t bg-gray-50 rounded-b-lg flex justify-end">
                     <button
                         onClick={handleClose}
-                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        className="px-3 py-1 sm:px-4 sm:py-2 bg-blue-500 text-white rounded text-sm sm:text-base hover:bg-blue-600 transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                     >
                         閉じる
                     </button>
