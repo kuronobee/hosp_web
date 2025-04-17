@@ -124,7 +124,7 @@ const generateMonthDates = (month: Date): Date[] => {
   
   // 月の初日
   const startDate = new Date(year, monthIndex, 1);
-  
+  void startDate;
   // 月の最終日
   const endDate = new Date(year, monthIndex + 1, 0);
   
@@ -394,6 +394,7 @@ const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({ user, token }) =>
             
             // 土日または祝日かどうかをチェック
             const isHolidayDate = isHoliday(date);
+            void isHolidayDate;
             const isSundayOrHoliday = date.getDay() === 0 || isNationalHoliday(date);
             const isSaturday = date.getDay() === 6;
             
