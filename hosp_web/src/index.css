@@ -213,3 +213,52 @@
     justify-content: center;
   }
 }
+
+/* index.cssに追加するアニメーション */
+
+/* フェードインアニメーション */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 0.8;
+    transform: translateY(0);
+  }
+}
+
+/* ホバー時の微細な浮き上がりアニメーション */
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+/* スクロールトップボタン用のスタイル */
+.scroll-to-top-button {
+  animation: fadeIn 0.3s ease-in-out;
+  transition: all 0.3s ease;
+}
+
+.scroll-to-top-button:hover {
+  animation: float 1s ease-in-out infinite;
+}
+
+/* スマホ用の一番上に戻るボタンの最適化 */
+@media (max-width: 640px) {
+  .scroll-to-top-button {
+    /* タップしやすいサイズに */
+    min-width: 48px;
+    min-height: 48px;
+    /* 画面端からの余白を調整 */
+    bottom: 16px;
+    right: 16px;
+  }
+}

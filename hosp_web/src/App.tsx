@@ -1,10 +1,11 @@
 // App.tsxの更新部分
 
-import { useState } from 'react';
-import './App.css';
-import GoogleLogin from './components/GoogleLogin';
-import MultiCalendarView from './components/MultiCalendarView';
-import logoImage from './assets/logo.gif'; // ロゴをインポート
+import { useState } from "react";
+import "./App.css";
+import GoogleLogin from "./components/GoogleLogin";
+import MultiCalendarView from "./components/MultiCalendarView";
+import logoImage from "./assets/logo.gif"; // ロゴをインポート
+import ScrollToTopButton from "./components/ScrollToTopButton";
 
 // GoogleUserの型定義
 interface GoogleUser {
@@ -15,20 +16,20 @@ interface GoogleUser {
 
 function App() {
   const [user, setUser] = useState<GoogleUser | null>(null);
-  const [token, setToken] = useState<string>('');
+  const [token, setToken] = useState<string>("");
 
   // ログイン成功時の処理
   const handleLoginSuccess = (userData: GoogleUser, accessToken: string) => {
     setUser(userData);
     setToken(accessToken);
-    console.log('App: ログイン成功', userData);
+    console.log("App: ログイン成功", userData);
   };
 
   // ログアウト時の処理
   const handleLogout = () => {
     setUser(null);
-    setToken('');
-    console.log('App: ログアウト');
+    setToken("");
+    console.log("App: ログアウト");
   };
 
   return (
@@ -39,9 +40,9 @@ function App() {
           {/* タイトルとロゴ */}
           <div className="flex items-center">
             {/* ロゴ画像 */}
-            <img 
-              src={logoImage} 
-              alt="入院管理システムロゴ" 
+            <img
+              src={logoImage}
+              alt="入院管理システムロゴ"
               className="h-8 sm:h-10 md:h-12 mr-2 sm:mr-3"
             />
             {/* アプリ名 */}
@@ -49,28 +50,25 @@ function App() {
               入院管理2025 web版
             </h1>
           </div>
-          
+
           {/* 右上にコンパクトなGoogle連携コンポーネント配置 */}
           <div className="z-10">
-            <GoogleLogin 
-              onLoginSuccess={handleLoginSuccess} 
-              onLogout={handleLogout} 
+            <GoogleLogin
+              onLoginSuccess={handleLoginSuccess}
+              onLogout={handleLogout}
             />
           </div>
         </div>
       </header>
-      
+
       {/* コンテンツエリアの余白を削減 */}
       <main className="w-full mx-auto py-2 px-1 sm:px-3 md:px-4">
         <div className="py-2">
           {/* 複数カレンダー表示コンポーネント */}
-          <MultiCalendarView 
-            user={user} 
-            token={token}
-          />
+          <MultiCalendarView user={user} token={token} />
         </div>
       </main>
-      
+
       <footer className="bg-white shadow mt-4 py-2">
         <div className="w-full mx-auto px-2 sm:px-4">
           <p className="text-center text-gray-500 text-xs">
@@ -78,6 +76,8 @@ function App() {
           </p>
         </div>
       </footer>
+      {/* ScrollToTopButtonコンポーネントを追加 */}
+      <ScrollToTopButton />
     </div>
   );
 }
