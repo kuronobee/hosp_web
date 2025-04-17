@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import EventCard, { CalendarEvent, shouldShowEvent } from './EventCard';
+import EventCard, { CalendarEvent, shouldShowEvent, isAnnotationEvent } from './EventCard';
 import EventDetailsModal from './EventDetailsModal';
 
 interface GoogleUser {
@@ -37,9 +37,9 @@ const CALENDARS = [
 
 // カレンダーID→背景色のマッピング
 const CALENDAR_STYLES: Record<string, string> = {
-  "med.miyazaki-u.ac.jp_lfki2pa7phl59ikva7ue5bkfnc@group.calendar.google.com": "bg-pink-50",
-  "med.miyazaki-u.ac.jp_g082esl03g5ei2facghfkt96r4@group.calendar.google.com": "bg-green-50",
-  "med.miyazaki-u.ac.jp_n0nmh5i6ioqcol3m3m2nclvv5k@group.calendar.google.com": "bg-yellow-50"
+  "med.miyazaki-u.ac.jp_lfki2pa7phl59ikva7ue5bkfnc@group.calendar.google.com": "bg-pink-200",
+  "med.miyazaki-u.ac.jp_g082esl03g5ei2facghfkt96r4@group.calendar.google.com": "bg-green-200",
+  "med.miyazaki-u.ac.jp_n0nmh5i6ioqcol3m3m2nclvv5k@group.calendar.google.com": "bg-yellow-200"
 };
 
 // 日付をYYYY-MM-DD形式に変換する関数
@@ -59,9 +59,14 @@ const formatDateForDisplay = (date: Date): string => {
 // イベントの開始日を取得する関数（日付または日時から）
 const getEventStartDate = (event: CalendarEvent): Date => {
   if (event.start.dateTime) {
-    return new Date(event.start.dateTime);
+    const datewith = new Date(event.start.dateTime);
+    return new Date(datewith.setDate(datewith.getDate() - 1)); // Google Calendar APIの仕様により、1日前に設定    
   }
-  return new Date(event.start.date as string);
+  // 日付のみの場合（終日イベント）
+  const date = new Date(event.start.date as string);
+  // タイムゾーンの問題を修正するために、時間を12:00に設定
+  date.setHours(12, 0, 0, 0);
+  return new Date(date.setDate(date.getDate() - 1)); // Google Calendar APIの仕様により、1日前に設定;
 };
 
 // イベントを日付ごとにグループ化する関数
@@ -76,7 +81,35 @@ const groupEventsByDate = (events: CalendarEvent[]): Record<string, CalendarEven
       grouped[dateKey] = [];
     }
     
-    grouped[dateKey].push(event);
+    // イベントがAT=trueかどうかを確認し、isPriorityプロパティを設定
+    const priority = isAnnotationEvent(event);
+    const eventWithPriority = {
+      ...event,
+      isPriority: priority
+    };
+    
+    grouped[dateKey].push(eventWithPriority);
+  });
+  
+  // 各日付内でイベントをソート（優先度が高いものを先頭に）
+  Object.keys(grouped).forEach(date => {
+    grouped[date].sort((a, b) => {
+      // まず優先度でソート
+      if (a.isPriority && !b.isPriority) return -1;
+      if (!a.isPriority && b.isPriority) return 1;
+      
+      // 優先度が同じ場合は、時間でソート
+      if (a.start.dateTime && b.start.dateTime) {
+        return new Date(a.start.dateTime).getTime() - new Date(b.start.dateTime).getTime();
+      }
+      
+      // 終日イベントは時間指定イベントの後に配置
+      if (a.start.dateTime && !b.start.dateTime) return -1;
+      if (!a.start.dateTime && b.start.dateTime) return 1;
+      
+      // どちらも終日イベントの場合はタイトルでソート
+      return (a.summary || '').localeCompare(b.summary || '');
+    });
   });
   
   return grouped;
@@ -132,71 +165,84 @@ const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({ user, token }) =>
     });
   };
 
-  // イベントを取得する関数
-  const fetchEvents = async () => {
+  
+  /// イベントを取得する関数
+const fetchEvents = async () => {
     if (!user || !token || selectedCalendars.length === 0) {
       setEvents([]);
       setGroupedEvents({});
       return;
     }
-    
+  
     setIsLoading(true);
     setError(null);
-    
+  
     try {
       // 月の初日と最終日を取得
       const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-      const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-      
+      const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 6);
+  
       // API用に日付をフォーマット
       const timeMin = startOfMonth.toISOString();
       const timeMax = endOfMonth.toISOString();
-      
-      // 選択されたすべてのカレンダーからイベントを取得
-      const allPromises = selectedCalendars.map(calendarId => 
-        fetch(
-          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
-            calendarId
-          )}/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(
-            timeMax
-          )}&maxResults=100&singleEvents=true&orderBy=startTime`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+  
+      // カレンダーIDごとにページングを考慮して全イベントを取得
+      const fetchAllPages = async (calendarId: string): Promise<CalendarEvent[]> => {
+        let allItems: CalendarEvent[] = [];
+        let pageToken: string | undefined = undefined;
+  
+        do {
+          const params = new URLSearchParams({
+            timeMin,
+            timeMax,
+            maxResults: '100',
+            singleEvents: 'true',
+            orderBy: 'startTime',
+          });
+          if (pageToken) {
+            params.set('pageToken', pageToken);
           }
-        )
-        .then(response => {
+  
+          const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
+            calendarId
+          )}/events?${params.toString()}`;
+  
+          const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+  
           if (!response.ok) {
             throw new Error(`カレンダー ${calendarId} のイベント取得エラー: ${response.status}`);
           }
-          return response.json();
-        })
-        .then(data => {
-          // 各イベントにカレンダーIDを追加
-          return (data.items || []).map((item: CalendarEvent) => ({
+  
+          const data = await response.json();
+          const items: CalendarEvent[] = (data.items || []).map((item: CalendarEvent) => ({
             ...item,
-            calendarId
+            calendarId,
           }));
-        })
-      );
-      
-      // すべてのカレンダーデータを取得
+  
+          allItems = allItems.concat(items);
+          pageToken = data.nextPageToken;
+        } while (pageToken);
+  
+        return allItems;
+      };
+  
+      // 選択されたすべてのカレンダーからイベントを取得
+      const allPromises = selectedCalendars.map(fetchAllPages);
       const results = await Promise.all(allPromises);
-      
+  
       // すべてのイベントを結合
       const allEvents = results.flat();
       console.log('取得したすべてのイベント:', allEvents);
-      
-      // フィルタリング条件に基づいてイベントをフィルタリング
+  
+      // フィルタリングとグルーピング
       const filteredEvents = allEvents.filter(shouldShowEvent);
-      
       setEvents(filteredEvents);
-      
-      // イベントを日付ごとにグループ化
+  
       const grouped = groupEventsByDate(filteredEvents);
       setGroupedEvents(grouped);
-      
+  
       setIsLoading(false);
     } catch (err) {
       console.error('カレンダーイベント取得エラー:', err);
@@ -205,10 +251,11 @@ const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({ user, token }) =>
     }
   };
 
+// カレンダーの全イベントを取得する関数（ページネーション対応）
   // 月が変わったときやカレンダー選択状態が変わったときに再取得
   useEffect(() => {
     fetchEvents();
-  }, [user, token, currentMonth, selectedCalendars]);
+  }, [user, currentMonth, selectedCalendars, token]);
 
   // 月の日付配列を生成
   const monthDates = generateMonthDates(currentMonth);
@@ -282,6 +329,7 @@ const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({ user, token }) =>
         </div>
       </div>
       
+      
       {error && (
         <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 my-4">
           <p className="font-bold">エラー</p>
@@ -323,12 +371,19 @@ const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({ user, token }) =>
                            date.getMonth() === today.getMonth() && 
                            date.getFullYear() === today.getFullYear();
             
+            // この日付に優先イベントがあるかチェック
+            const hasPriorityEvent = dayEvents.some(event => event.isPriority);
+            
             return (
-              <div key={dateKey} className={`border rounded-lg overflow-hidden ${isToday ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'}`}>
+              <div 
+                key={dateKey} 
+                className={`border rounded-lg overflow-hidden ${isToday ? 'border-blue-500 ring-2 ring-blue-200' : hasPriorityEvent ? 'border-red-300 ring-1 ring-red-100' : 'border-gray-200'}`}
+              >
                 {/* 日付ヘッダー */}
                 <div className={`p-3 ${isToday ? 'bg-blue-500 text-white' : 'bg-gray-50 text-gray-700'}`}>
                   <h3 className="font-medium">
                     {formatDateForDisplay(date)}
+
                   </h3>
                 </div>
                 
