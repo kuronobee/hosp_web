@@ -1,3 +1,5 @@
+// EventDetailsModal.tsxの更新
+
 import React, { useState, useEffect } from 'react';
 import { CalendarEvent } from './EventCard';
 
@@ -96,7 +98,7 @@ const decodeEntities = (text: string): string => {
 };
 
 // 非表示にするフィールド名のリスト
-const HIDDEN_FIELDS = ['CID', 'EID', 'Date'];
+const HIDDEN_FIELDS = ['CID', 'EID', 'Date', '確認'];
 
 // XMLの内容を解析してリスト形式に変換する関数
 const parseXmlContent = (xmlContent: string): { title: string; items: { name: string; value: string; type: string }[] } | null => {
@@ -112,7 +114,7 @@ const parseXmlContent = (xmlContent: string): { title: string; items: { name: st
             if (tagMatch[1] !== 'PatientInfo') {  // PatientInfoタグは除外
                 const tagName = tagMatch[1].trim();
                 
-                // 非表示フィールドはスキップ
+                // 非表示フィールドはスキップ（「確認」タグを追加）
                 if (HIDDEN_FIELDS.includes(tagName)) {
                     continue;
                 }
@@ -160,7 +162,16 @@ const FIELD_NAME_MAP: Record<string, string> = {
     'Phone': '電話番号',
     'Comment': 'コメント',
     'Description': '詳細',
-    'AT': 'アノテーションフラグ'
+    'AT': 'アノテーションフラグ',
+    '主治医': '主治医'
+};
+
+// イベントの説明から確認フラグの状態を取得
+const getConfirmationStatus = (event: CalendarEvent | null): boolean => {
+    if (!event || !event.description) return false;
+    
+    const decodedDesc = decodeEntities(event.description);
+    return decodedDesc.includes('<確認>true</確認>');
 };
 
 const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onClose }) => {
@@ -182,6 +193,11 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onClose })
     };
 
     if (!event) return null;
+
+    // イベントのタイトル表示用の文字列を作成（確認済みの場合はチェックマークを追加）
+    const displayTitle = getConfirmationStatus(event)
+        ? `✓ ${event.summary || '無題の予定'}`
+        : event.summary || '無題の予定';
 
     // イベントのカレンダー名を取得
     const calendarName = event.calendarId && CALENDAR_NAMES[event.calendarId]
@@ -217,7 +233,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onClose })
                 {/* ヘッダー - よりコンパクトに */}
                 <div className="flex justify-between items-center p-3 border-b bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t-lg">
                     <h2 className="text-lg sm:text-xl font-semibold truncate">
-                        {event.summary || '無題の予定'}
+                        {displayTitle}
                     </h2>
                     <button
                         onClick={handleClose}
@@ -286,6 +302,20 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onClose })
                                     </div>
                                     <div className="ml-2 text-sm sm:text-base">
                                         <p className="text-gray-700">{event.location}</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 確認状態の表示 */}
+                            {getConfirmationStatus(event) && (
+                                <div className="flex p-1 sm:p-2 rounded-lg bg-green-50 hover:bg-green-100 transition-colors">
+                                    <div className="w-6 sm:w-8 flex-shrink-0 text-green-500">
+                                        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                    </div>
+                                    <div className="ml-2 text-sm sm:text-base">
+                                        <p className="text-green-700 font-medium">確認済み</p>
                                     </div>
                                 </div>
                             )}
