@@ -66,7 +66,7 @@ export const isScheduleEvent = (event: CalendarEvent): boolean => {
   if (!event.summary) return false;
   console.log("@で始まる?", event.summary.startsWith('@'));
   // @で始まるイベントを優先
-  return event.summary.startsWith('@');
+  return event.summary.startsWith('@') || !isAllDayEvent(event);
 }
 // イベントをフィルタリングするための関数
 export const shouldShowEvent = (event: CalendarEvent): boolean => {
@@ -105,7 +105,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onViewDetails, calendarSty
   const timeString = allDay 
     ? '' 
     : `スケジュール ${formatTime(event.start.dateTime)}〜${formatTime(event.end.dateTime)}`;
-
+ 
 
   return (
     <div 
@@ -125,7 +125,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onViewDetails, calendarSty
           )}
         </div>
         
-        <h3 className={`font-medium ${isPriority ? 'text-red-800 text-sl' : 'text-gray-800'} mb-1 line-clamp-2`}>
+        <h3 className={`font-medium text-left ${isPriority ? 'text-red-800 text-sl' : 'text-gray-800'} mb-1 line-clamp-2`}>
           {event.summary || '無題の予定'}
         </h3>
         

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import EventCard, { CalendarEvent, shouldShowEvent, isAnnotationEvent } from './EventCard';
 import EventDetailsModal from './EventDetailsModal';
+import { isHoliday, isNationalHoliday, getHolidayName } from '../modules/holidayChecker';
 
 interface GoogleUser {
   email: string;
@@ -66,7 +67,7 @@ const getEventStartDate = (event: CalendarEvent): Date => {
   const date = new Date(event.start.date as string);
   // タイムゾーンの問題を修正するために、時間を12:00に設定
   date.setHours(12, 0, 0, 0);
-  return new Date(date.setDate(date.getDate() - 1)); // Google Calendar APIの仕様により、1日前に設定;
+  return new Date(date.setDate(date.getDate() - 1)); // Google Calendar APIの仕様により、1日前に設定
 };
 
 // イベントを日付ごとにグループ化する関数
@@ -123,7 +124,6 @@ const generateMonthDates = (month: Date): Date[] => {
   
   // 月の初日
   const startDate = new Date(year, monthIndex, 1);
-  void startDate; // 今は使わない
   
   // 月の最終日
   const endDate = new Date(year, monthIndex + 1, 0);
@@ -165,9 +165,8 @@ const MultiCalendarView: React.FC<MultiCalendarViewProps> = ({ user, token }) =>
     });
   };
 
-  
   /// イベントを取得する関数
-const fetchEvents = async () => {
+  const fetchEvents = async () => {
     if (!user || !token || selectedCalendars.length === 0) {
       setEvents([]);
       setGroupedEvents({});
@@ -251,7 +250,7 @@ const fetchEvents = async () => {
     }
   };
 
-// カレンダーの全イベントを取得する関数（ページネーション対応）
+  // カレンダーの全イベントを取得する関数（ページネーション対応）
   // 月が変わったときやカレンダー選択状態が変わったときに再取得
   useEffect(() => {
     fetchEvents();
@@ -329,6 +328,25 @@ const fetchEvents = async () => {
         </div>
       </div>
       
+      {/* 凡例 */}
+      <div className="flex flex-wrap gap-4 mb-4">
+        <div className="flex items-center">
+          <div className="w-4 h-4 bg-blue-50 border border-blue-300 mr-2"></div>
+          <span className="text-sm">平日</span>
+        </div>
+        <div className="flex items-center">
+          <div className="w-4 h-4 bg-red-100 border border-red-300 mr-2"></div>
+          <span className="text-sm">日曜・祝日</span>
+        </div>
+        <div className="flex items-center">
+          <div className="w-4 h-4 bg-amber-100 border border-amber-300 mr-2"></div>
+          <span className="text-sm">土曜日</span>
+        </div>
+        <div className="flex items-center">
+          <div className="w-4 h-4 border-2 border-blue-500 bg-white mr-2"></div>
+          <span className="text-sm">今日</span>
+        </div>
+      </div>
       
       {error && (
         <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 my-4">
@@ -374,17 +392,40 @@ const fetchEvents = async () => {
             // この日付に優先イベントがあるかチェック
             const hasPriorityEvent = dayEvents.some(event => event.isPriority);
             
+            // 土日または祝日かどうかをチェック
+            const isHolidayDate = isHoliday(date);
+            const isSundayOrHoliday = date.getDay() === 0 || isNationalHoliday(date);
+            const isSaturday = date.getDay() === 6;
+            
+            // 日付パネルの背景色を決定
+            let dateBgClass = 'bg-blue-50'; // 平日の背景色
+            
+            if (isSundayOrHoliday) { // 日曜または祝日
+              dateBgClass = 'bg-red-100';
+            } else if (isSaturday) { // 土曜日
+              dateBgClass = 'bg-amber-100';
+            }
+            
+            // 祝日名を取得
+            const holidayName = getHolidayName(date);
+            
             return (
               <div 
                 key={dateKey} 
                 className={`border rounded-lg overflow-hidden ${isToday ? 'border-blue-500 ring-2 ring-blue-200' : hasPriorityEvent ? 'border-red-300 ring-1 ring-red-100' : 'border-gray-200'}`}
               >
                 {/* 日付ヘッダー */}
-                <div className={`p-3 ${isToday ? 'bg-blue-500 text-white' : 'bg-gray-50 text-gray-700'}`}>
-                  <h3 className="font-medium">
-                    {formatDateForDisplay(date)}
-
-                  </h3>
+                <div className={`p-3 ${isToday ? 'bg-blue-500 text-white' : dateBgClass}`}>
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-medium">
+                      {formatDateForDisplay(date)}
+                    </h3>
+                    {holidayName && (
+                      <span className="text-xs font-medium text-red-700">
+                        {holidayName}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 
                 {/* イベントリスト */}
