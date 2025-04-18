@@ -370,13 +370,18 @@ export enum HolidayType {
            getHolidayInfo(date).holiday !== HolidayType.WEEKDAY; // 祝日・振替休日・国民の休日
   }
   
-  /**
-   * 指定された日付が祝日かどうかを判定
-   * @param date 判定する日付
-   * @returns 祝日の場合はtrue、それ以外はfalse
-   */
-  export function isNationalHoliday(date: Date): boolean {
-    return getHolidayInfo(date).holiday === HolidayType.SYUKUJITSU;
+/**
+ * 指定された日付が祝日かどうかを判定
+ * @param date 判定する日付
+ * @returns 祝日の場合はtrue、それ以外はfalse
+ */
+export function isNationalHoliday(date: Date): boolean {
+    const info = getHolidayInfo(date);
+    // 祝日、振替休日、国民の休日すべてを含める
+    return info.holiday === HolidayType.SYUKUJITSU || 
+           info.holiday === HolidayType.C_HOLIDAY || 
+           info.holiday === HolidayType.HOLIDAY ||
+           isYearEndHoliday(date); // 年末年始休日も含める
   }
   
   /**
@@ -407,4 +412,26 @@ export enum HolidayType {
    */
   export function getHolidayName(date: Date): string | null {
     return getHolidayInfo(date).name;
+  }
+
+  /**
+ * 指定された日付が年末年始休日（12月28日〜1月3日）かどうかを判定
+ * @param date 判定する日付
+ * @returns 年末年始休日の場合はtrue、それ以外はfalse
+ */
+function isYearEndHoliday(date: Date): boolean {
+    const month = date.getMonth() + 1; // JavaScriptの月は0始まり
+    const day = date.getDate();
+    
+    // 12月28日〜12月31日
+    if (month === 12 && day >= 28 && day <= 31) {
+      return true;
+    }
+    
+    // 1月1日〜1月3日
+    if (month === 1 && day >= 1 && day <= 3) {
+      return true;
+    }
+    
+    return false;
   }
