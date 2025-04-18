@@ -195,14 +195,13 @@ const GoogleLogin = ({ onLoginSuccess, onLogout }: GoogleLoginProps) => {
             <img src={user.picture} alt={user.name} className="h-10 w-10 object-cover rounded-full" title={`${user.name} (${user.email})`} />
           </button>
           {showDropdown && (
-            <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-10 py-1 animate-fadeIn">
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center">
-                <img src={user.picture} alt={user.name} className="h-10 w-10 mr-3 rounded-full" />
-                <div className="truncate">
-                  <p className="font-semibold text-gray-800 truncate">{user.name}</p>
-                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                </div>
+            <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-10 py-1 animate-fadeIn opacity-100">              <div className="px-4 py-3 border-b border-gray-100 flex items-center">
+              <img src={user.picture} alt={user.name} className="h-10 w-10 mr-3 rounded-full" />
+              <div className="truncate">
+                <p className="font-semibold text-gray-800 truncate">{user.name}</p>
+                <p className="text-xs text-gray-500 truncate">{user.email}</p>
               </div>
+            </div>
               <div className="border-b border-gray-100 py-2 px-4">
                 <p className="text-xs text-blue-600">✓ カレンダー連携済み</p>
               </div>
